@@ -1,0 +1,121 @@
+// Copyright (c) 2025 KMI Music, Inc.
+// This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#ifndef KMI_DEV_DATA_H
+#define KMI_DEV_DATA_H
+
+/* KMI Device Data Header
+
+  Contains KMI device information, such as SysEx/USB PIDs, portnames, etc
+
+  This file should only contain #defines, and can be #included at the top of KMI_dm.cpp
+
+*/
+
+#include "qglobal.h" // needed for OS defines
+#include "midi.h"
+
+// USB and SysEx Product IDs
+
+#define PID_THRU        0
+#define PID_STRINGPORT  1
+#define PID_SOFTSTEP    10 // or is this 1?
+#define PID_12STEP      20
+#define PID_QUNEXUS     25
+#define PID_KBOARD      26
+#define PID_APPL_CBL    27
+#define PID_QUNEO       30
+#define PID_ROGUE       31
+#define PID_KMIX        35
+#define PID_KMIX_CTL    36
+#define PID_KBP4        37
+#define PID_KBP4_BL     38
+#define PID_EM1         39
+#define PID_EM1_BL      40
+
+#define PID_BOPPAD      117
+#define PID_BOPPAD_BL   118 // this may be USB only, confirm if sysex changes
+
+// **********************************************************************
+// define all of the USB OS specific midi port names used in KMI products
+// **********************************************************************
+
+// QUNEXUS
+
+#ifdef Q_OS_MAC
+    #define QUNEXUS_IN_P1 "QuNexus Port 1"
+    #define QUNEXUS_IN_P2 "QuNexus Port 2"
+    #define QUNEXUS_IN_P3 "QuNexus Port 3"
+    #define QUNEXUS_OUT_P1 "QuNexus Port 1"
+    #define QUNEXUS_OUT_P2 "QuNexus Port 2"
+    #define QUNEXUS_OUT_P3 "QuNexus Port 3"
+#else
+    #define QUNEXUS_IN_P1 "QuNexus"
+    #define QUNEXUS_IN_P2 "MIDIIN2 (QuNexus)"
+    #define QUNEXUS_IN_P3 "MIDIIN3 (QuNexus)"
+    #define QUNEXUS_OUT_P1 "QuNexus"
+    #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
+    #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
+#endif
+
+// K-BOARD
+
+#ifdef Q_OS_MAC
+    #define KBOARD_IN_P1 "K-Board"
+    #define KBOARD_OUT_P1 "K-Board"
+#else
+    #define KBOARD_IN_P1 "K-Board"
+    #define KBOARD_OUT_P1 "K-Board"
+#endif
+
+// BOPPAD
+
+#ifdef Q_OS_MAC
+    #define BOPPAD_IN_P1 "BopPad"
+    #define BOPPAD_OUT_P1 "BopPad"
+#else
+    #define BOPPAD_IN_P1 "BopPad" // todo: test on windows
+    #define BOPPAD_OUT_P1 "BopPad"
+#endif
+
+// QuNeo
+
+#ifdef Q_OS_MAC
+    #define QUNEO_IN_P1 "QUNEO"
+    #define QUNEO_OUT_P1 "QUNEO"
+#else
+    #define QUNEO_IN_P1 "QUNEO"
+    #define QUNEO_OUT_P1 "QUNEO"
+#endif
+
+// 12 Step
+
+#ifdef Q_OS_MAC
+    #define TWELVESTEP_IN_P1 "12Step Port 1"
+    #define TWELVESTEP_IN_P2 "12Step Port 2"
+    #define TWELVESTEP_OUT_P1 "12Step Port 1"
+    #define TWELVESTEP_OUT_P2 "12Step Port 2"
+#else
+    #define TWELVESTEP_IN_P1 "12Step"               // todo: test on windows
+    #define TWELVESTEP_IN_P2 "MIDIIN2 (12Step)"
+    #define TWELVESTEP_OUT_P1 "12Step"
+    #define TWELVESTEP_OUT_P2 "MIDIOUT2 (12Step)"
+#endif
+
+// SOFTSTEP
+
+#ifdef Q_OS_MAC
+    #define SS_IN_P1 "SSCOM Port 1"
+    #define SS_IN_P2 "SSCOM Port 2"
+    #define SS_OUT_P1 "SSCOM Port 1"
+    #define SS_OUT_P2 "SSCOM Port 2"
+#else
+    #define SS_IN_P1 "SSCOM"
+    #define SS_IN_P2 "MIDIIN2 (SSCOM)"
+    #define SS_OUT_P1 "SSCOM"
+    #define SS_OUT_P2 "MIDIOUT2 (SSCOM)"
+#endif
+
+
+
+#endif // KMI_DEV_DATA_H
