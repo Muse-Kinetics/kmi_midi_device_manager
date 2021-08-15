@@ -4,7 +4,7 @@
 #ifndef MIDIDEVICEMANAGER_H
 #define MIDIDEVICEMANAGER_H
 
-/* KMI Device Manager
+/* KMI MIDI Device Manager
 
   A cross-platform C++/Qt MIDI library for KMI devices.
   Written by Eric Bateman, August 2021.
@@ -21,15 +21,6 @@
 #include <QTimer>
 
 #include "RtMidi.h"
-
-//#include "WindowsMidiTypes.h"
-
-//enum
-//{
-//    NORMAL,
-//    BOOTLOADER_POST_UPDATE_REQUEST,
-//    BOOTLOADER_NO_UPDATE_REQUEST
-//};
 
 enum
 {
@@ -51,7 +42,7 @@ class MidiDeviceManager : public QWidget
 {
     Q_OBJECT
 public:
-    explicit MidiDeviceManager(QWidget *parent = 0, int initPID = -1);
+    explicit MidiDeviceManager(QWidget *parent = 0, int initPID = -1, QString objectNameInit = "undefined");
 
     // from device
     static void midiInCallback ( double deltatime, std::vector< unsigned char > *message, void *userData );
@@ -64,7 +55,11 @@ public:
     RtMidiIn *midi_in;
     RtMidiOut *midi_out;
 
+    // the name of the device detected by the PID
     QString deviceName;
+
+    // the name of the object, used for debugging and reference
+    QString objectName;
 
     QMap<int, QString> lookupPID;
 
@@ -75,30 +70,18 @@ public:
     QFile *firmware;
     QByteArray firmwareByteArray;
 
-//    QString expectedBootloaderVersion;
-//    QString expectedFirmwareVersion;
-//    QString foundBootloaderVersion;
-//    QString foundFirmwwareVersion;
-
     //Helper variables to process sysex
     QByteArray sysExMessage; //Message to be processed;
 
     //Describes whether or not a fw update has been requested-- useful for managing bootloader reconnects
     bool fwUpdateRequested;
-    bool inBootloader;
-
-    bool queryReplied;
-
-    QByteArray globals;
-    QString    sysExType;
-    bool       globalsRecieved;
 
     QTimer* versionPoller;
-    bool versionReply;
 
-    QString mode;
-
+    // stops MIDI if sysex is sending
     bool ioGate;
+
+    QDialog* errDialog;
 
     //------ Rx MIDI Data Variables
     uchar RPN_MSB[16];
@@ -112,9 +95,14 @@ public:
     bool updatePortOut(int port);
 
 signals:
-    void signalFirmwareMismatch(MidiDeviceManager*);
-    void signalFirmwareMatches(MidiDeviceManager*);
+    // detect MIDI feedback loop
+    void signalFeedbackLoopDetected(MidiDeviceManager*);
 
+    // detect firmware version
+    void signalFirmwareDetected(MidiDeviceManager*, bool);
+    void signalStopPolling();
+
+    // firmware update
     void signalProgressDialog(QString messageType, int val);
     void signalFirmwareUpdateComplete();
     void signalConnected(bool);
@@ -124,6 +112,7 @@ signals:
     void signalRxSysEx(QByteArray sysExMessageByteArray, std::vector< unsigned char > *message);
 
     // channel messages
+    void signalRxMidi_raw(uchar status, uchar d1, uchar d2, uchar chan);
     void signalRxMidi_noteOff(uchar chan, uchar note, uchar velocity);
     void signalRxMidi_noteOn(uchar chan, uchar note, uchar velocity);
     void signalRxMidi_polyAT(uchar chan, uchar note, uchar val);
@@ -145,13 +134,14 @@ signals:
     void signalRxMidi_Stop();
     void signalRxMidi_ActSense();
     void signalRxMidi_SysReset();
-    void signalStopPolling();
 
 public slots:
     bool slotOpenMidiIn();
     bool slotOpenMidiOut();
     bool slotCloseMidiIn();
     bool slotCloseMidiOut();
+
+    void slotTestFeedbackLoop();
 
     void slotSetExpectedFW(QByteArray fwVer);
     void slotPollVersion();
@@ -163,11 +153,15 @@ public slots:
 
     void slotUpdateFirmware();
 
+    void slotSendMIDI(uchar status, uchar d1, uchar d2, uchar chan);
     void slotParsePacket(QByteArray packetArray);
     void slotRxParam(int rpn, uchar val, uchar chan, uchar rpn_datatype);
 
+    void slotErrorPopup(QString errorMessage);
+
 private:
     int port_in, port_out;
+    bool callbackIsSet;
 
 };
 

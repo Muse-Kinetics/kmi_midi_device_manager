@@ -17,7 +17,7 @@
 
 // USB and SysEx Product IDs
 
-#define PID_THRU        0
+#define PID_AUX         0
 #define PID_STRINGPORT  1
 #define PID_SOFTSTEP    10 // or is this 1?
 #define PID_12STEP      20

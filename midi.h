@@ -55,6 +55,7 @@
 // for ID requests where we ignore the address byte
 #define SX_ADD_IGNORE			0x7F
 #define SX_ADD_ZERO             0x00
+#define SX_UNIV_ACK             0x7F
 
 // info request (device id)
 #define SX_UNV_INFO				0x06

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 KMI Music, Inc.
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
-/* KMI Device Manager
+/* KMI MIDI Device Manager
 
   A cross-platform C++/Qt MIDI library for KMI devices.
   Written by Eric Bateman, August 2021.
@@ -28,16 +28,17 @@
 #include "KMI_mdm.h"
 #include "KMI_DevData.h"
 #include "KMI_SysexMessages.h"
+#include <QMessageBox>
 
 // debugging macro
-#define DM_OUT qDebug() << deviceName << ": "
-#define DM_OUT_P qDebug() << thisMidiDeviceManager->deviceName << ": "
+#define DM_OUT qDebug() << objectName << ": "
+#define DM_OUT_P qDebug() << thisMidiDeviceManager->objectName << ": "
 
-MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID) :
+MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objectNameInit) :
     QWidget(parent)
 {
     // putting these here for now but ideally this should be in a common database/table    
-    lookupPID.insert(PID_THRU, "THRU");
+    lookupPID.insert(PID_AUX, "AUX");
     lookupPID.insert(PID_STRINGPORT, "StringPort");
     lookupPID.insert(PID_SOFTSTEP, "SoftStep");
     lookupPID.insert(PID_12STEP, "12 Step");
@@ -58,6 +59,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID) :
 
     PID = initPID;
     deviceName = lookupPID.value(PID);
+    objectName = objectNameInit;
 
     DM_OUT << "MidiDeviceManager created - " << deviceName << " PID:" << PID;
     port_in = -1;
@@ -67,13 +69,14 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID) :
     midi_in = new RtMidiIn();
     midi_out = new RtMidiOut();
 
+    // open gate
     ioGate = true;
+
+    callbackIsSet = false;
     fwUpdateRequested = false;
 
-    versionReply = false;
-    queryReplied = false;
-
     connect(this, SIGNAL(signalStopPolling()), this, SLOT(slotStopPolling()));
+
 }
 
 // **********************************************************************************
@@ -116,6 +119,7 @@ bool MidiDeviceManager::slotOpenMidiIn()
 
         // setup callback
         midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
+        callbackIsSet = true;
 
         // Don't ignore sysex, timing, or active sensing messages.
         midi_in->ignoreTypes( false, false, false );
@@ -158,6 +162,11 @@ bool MidiDeviceManager::slotCloseMidiIn()
     {
         //close ports
         midi_in->closePort();
+        if (callbackIsSet)
+        {
+            midi_in->cancelCallback();
+            callbackIsSet = false;
+        }
     }
     catch (RtMidiError &error)
     {
@@ -184,6 +193,12 @@ bool MidiDeviceManager::slotCloseMidiOut()
         return 0;
     }
     return 1;
+}
+
+// sends a sysex universal ack with magic number, if received then alert app
+void MidiDeviceManager::slotTestFeedbackLoop()
+{
+    slotSendSysEx(_sx_ack_loop_test, sizeof(_sx_ack_loop_test));
 }
 
 // **********************************************************************************
@@ -229,27 +244,17 @@ void MidiDeviceManager::slotPollVersion()
     // ports aren't setup yet
     if (port_in == -1 || port_out == -1) return;
 
-    if(!queryReplied)
+    if (deviceName == "SoftStep") // softStep doesn't use the universal syx dev id request
     {
-        if (deviceName == "SoftStep") // softStep doesn't use the universal syx dev id request
-        {
-            slotSendSysEx(_fw_req_softstep, sizeof(_fw_req_softstep));
-        }
-        else if (deviceName == "12 Step") // 12 step also doesn't use the universal syx dev id request
-        {
-            slotSendSysEx(_fw_req_12step, sizeof(_fw_req_12step));
-        }
-        else // every other product does (EB TODO - verify this with 12 step)
-        {
-            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
-        }
+        slotSendSysEx(_fw_req_softstep, sizeof(_fw_req_softstep));
     }
-    else
+    else if (deviceName == "12 Step") // 12 step also doesn't use the universal syx dev id request
     {
-        DM_OUT << "STOP";
-
-        emit signalConnected(true);
-
+        slotSendSysEx(_fw_req_12step, sizeof(_fw_req_12step));
+    }
+    else // every other product does (EB TODO - verify this with 12 step)
+    {
+        slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
     }
 }
 
@@ -261,7 +266,10 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 {
     DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
     std::vector<unsigned char> message(sysEx, sysEx+len);
+
+    ioGate = false; // pause any midi output while sending SysEx
     midi_out->sendMessage( &message );
+    ioGate = true; // reopen gate
 
 }
 
@@ -273,6 +281,20 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::vector< unsigned char > *sysExMessageCharArray)
 {
     // DM_OUT << "slotProcessSysEx called - PID: " << PID << " deviceName: " << deviceName;
+
+    // Test for feedback loop
+    QByteArray feedbackLoopTest(reinterpret_cast<char*>(_sx_ack_loop_test), sizeof(_sx_ack_loop_test));
+    int feedbackTestIndex = sysExMessageByteArray.indexOf(feedbackLoopTest, 0);
+
+    if (feedbackTestIndex == 0) // feedback loop detected!
+    {
+        DM_OUT << "*** FEEDBACK LOOP DETECTED, MIDI PORTS CLOSED *** - " << sysExMessageByteArray;
+        this->disconnect(SIGNAL(signalRxMidi_raw(uchar, uchar, uchar, uchar)));
+        slotCloseMidiIn(); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+        slotCloseMidiOut(); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+        emit signalFeedbackLoopDetected(this);
+        slotErrorPopup("MIDI FEEDBACK LOOP DETECTED\nPorts Closed");
+    }
 
     // Query for SoftStep
     QByteArray fwQueryReplySS(reinterpret_cast<char*>(_fw_reply_softstep), sizeof(_fw_reply_softstep));
@@ -352,12 +374,12 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     if (deviceFirmwareVersion == applicationFirmwareVersion)
     {
         DM_OUT << "emit fw match - fwv: " << deviceFirmwareVersion << "cfwv: " << applicationFirmwareVersion;
-        emit signalFirmwareMatches(this);
+        emit signalFirmwareDetected(this, true);
     }
     else
     {
         DM_OUT << "emit fw mismatch - fwv: " << deviceFirmwareVersion << "cfwv: " << applicationFirmwareVersion;
-        emit signalFirmwareMismatch(this);
+        emit signalFirmwareDetected(this, true);
     }
 }
 
@@ -370,6 +392,88 @@ void MidiDeviceManager::slotUpdateFirmware()
 // **********************************************************************************
 // ***** Channel and system common slots/functions **********************************
 // **********************************************************************************
+
+// Send a MIDI message. Handles 1/2/3 byte packets. Chan goes last to allow 2/3 byte system common messages to omit channel
+void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 255, uchar chan = 255)
+{
+    DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4").arg(status).arg(d1).arg(d2).arg(chan);
+    uchar newStatus;
+    std::vector<uchar> packet;
+    packet.clear();
+
+    if (ioGate == false)
+    {
+        DM_OUT << "ioGate stopped an incomming MIDI message - status:" << status;
+        return; // do not send MIDI while sysex is transmitting
+    }
+
+    switch (status)
+    {
+    // **********************************
+    // ******** CHANNEL MESSAGES ********
+    // **********************************
+
+    // three byte packets
+    case MIDI_NOTE_OFF:
+    case MIDI_NOTE_ON:
+    case MIDI_NOTE_AFTERTOUCH:
+    case MIDI_CONTROL_CHANGE:
+    case MIDI_PITCH_BEND:
+        if (chan > 127 || d1 > 127 || d2 > 127) return; // catch bad data
+        newStatus = (status + chan);
+        packet.push_back(newStatus);
+        packet.push_back(d1);
+        packet.push_back(d2);
+        break;
+    // two byte packets
+    case MIDI_PROG_CHANGE:
+    case MIDI_CHANNEL_PRESSURE:
+        if (chan > 127 || d1 > 127) return; // catch bad data
+        newStatus = (status + chan);
+        packet.push_back(newStatus);
+        packet.push_back(d1);
+        break;
+
+    // **********************************
+    // ****** SYS COMMON MESSAGES *******
+    // **********************************
+
+    // three byte packets
+    case MIDI_MTC:
+    case MIDI_SONG_POSITION:
+        if (d1 > 127 || d2 > 127) return; // catch bad data
+        packet.push_back(status);
+        packet.push_back(d1);
+        packet.push_back(d2);
+        break;
+    // two byte packets
+    case MIDI_SONG_SELECT:
+        if (d1 > 127) return; // catch bad data
+        packet.push_back(status);
+        packet.push_back(d1);
+        break;
+    // single byte packets
+    case MIDI_TUNE_REQUEST:
+    case MIDI_RT_CLOCK:
+    case MIDI_RT_START:
+    case MIDI_RT_CONTINUE:
+    case MIDI_RT_STOP:
+    case MIDI_RT_ACTIVE_SENSE:
+    case MIDI_RT_RESET:
+        packet.push_back(status);
+        break;
+    // catch undefined and bad messages
+    default:
+        return; // go no further
+        break;
+    }
+
+    DM_OUT << "Send MIDI - packet: " << packet;
+
+    // prepare and send the packet
+    //std::vector<unsigned char> message(packet, packet+len);
+    midi_out->sendMessage( &packet );
+}
 
 void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
 {
@@ -394,6 +498,9 @@ void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
     }
 
     DM_OUT << "Packet Received - status: " << status << " ch: " << chan << " d1: " << data1 << " d2: " << data2;
+
+    // emit raw packet, makes direct routing between ports simple
+    emit signalRxMidi_raw(status, data1, data2, chan);
 
     // handle channel messages
     switch(status)
@@ -535,6 +642,16 @@ void MidiDeviceManager::slotRxParam(int param, uchar val, uchar chan, uchar mess
 }
 
 // **********************************************************************************
+// ***** Error Popup ****************************************************************
+// **********************************************************************************
+void MidiDeviceManager::slotErrorPopup(QString errorMessage)
+{
+    QMessageBox errBox;
+    errBox.setText(errorMessage);
+    errBox.exec();
+}
+
+// **********************************************************************************
 // ***** Callback *******************************************************************
 // **********************************************************************************
 
@@ -586,6 +703,11 @@ void MidiDeviceManager::midiInCallback( double deltatime, std::vector< unsigned 
         {
             DM_OUT_P << "ERROR- MIDI Message greater than 999 bytes (" << message->size() << " bytes) - write some more code to handle this!!";
         }
+    }
+    else
+    {
+        DM_OUT_P << "ioGate stopped midiInCallback - message size:" << message->size();
+        return; // do not send MIDI while sysex is transmitting
     }
 }
 

@@ -32,6 +32,16 @@ unsigned char _sx_id_reply_standard[] =
     SX_UNV_DEVID_REPLY
 };
 
+unsigned char _sx_ack_loop_test[] =
+{
+    MIDI_SX_START,
+    SX_UNIVERSAL,
+    SX_ADD_IGNORE,
+    SX_UNIV_ACK,
+    36,                 // magic number for detecting midi feedback loops
+    MIDI_SX_STOP,
+};
+
 // SoftStep Firmware Request
 unsigned char _fw_req_softstep[] =
 {
