@@ -24,7 +24,7 @@
 
 enum
 {
-    NONE,
+    NONE_PN,
     RPN,
     NRPN
 };
