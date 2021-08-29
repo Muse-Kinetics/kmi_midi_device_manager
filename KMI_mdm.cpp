@@ -661,15 +661,6 @@ void MidiDeviceManager::midiInCallback( double deltatime, std::vector< unsigned 
     MidiDeviceManager * thisMidiDeviceManager;
     thisMidiDeviceManager = (MidiDeviceManager*) thisCaller;
 
-    // check timing of events, might not be necessary
-    static double lastDeltatime;
-
-    if (deltatime < lastDeltatime)
-    {
-        DM_OUT_P << "MIDI events received out of order - last: " << lastDeltatime << " this:" << deltatime;
-    }
-    lastDeltatime = deltatime;
-
     DM_OUT_P << "midi in - time: " << deltatime << "length: " << message->size();
 
     QByteArray packetArray;
