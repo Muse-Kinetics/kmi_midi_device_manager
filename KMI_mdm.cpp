@@ -174,6 +174,13 @@ bool MidiDeviceManager::slotCloseMidiIn()
         DM_OUT << "CLOSE MIDI IN ERR:" << (QString::fromStdString(error.getMessage()));
         return 0;
     }
+
+    // alert host application that we are disconnected
+    if (connected)
+    {
+        connected = false;
+        emit(signalConnected(false));
+    }
     return 1;
 }
 
@@ -191,6 +198,13 @@ bool MidiDeviceManager::slotCloseMidiOut()
         /* Return the error */
         DM_OUT << "CLOSE MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
         return 0;
+    }
+
+    // alert host application that we are disconnected
+    if (connected)
+    {
+        connected = false;
+        emit(signalConnected(false));
     }
     return 1;
 }
@@ -369,12 +383,13 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
     // process firmware connection messages
     emit signalStopPolling();
-    emit signalConnected(true);
 
     if (deviceFirmwareVersion == applicationFirmwareVersion)
     {
         DM_OUT << "emit fw match - fwv: " << deviceFirmwareVersion << "cfwv: " << applicationFirmwareVersion;
         emit signalFirmwareDetected(this, true);
+        emit signalConnected(true);
+        connected = true;
     }
     else
     {
