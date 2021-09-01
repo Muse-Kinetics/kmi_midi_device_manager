@@ -75,6 +75,15 @@ unsigned char _fw_reply_12step[] =
 };
 
 
+// *********************************************************
+// Enter bootloader commands - TODO see if this can be done programatically or in an array
+
+// QuNexus
+unsigned char _bl_qunexus[] =
+{
+    0xF0,0x00,0x01,0x5F,0x7A,0x19,0x00,0x01,0x00,0x02,0x11,0x00,0x5A,0x62,0x00,0x30,0xF7
+};
+
 
 // *********************************************************
 

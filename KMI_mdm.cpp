@@ -61,7 +61,9 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     deviceName = lookupPID.value(PID);
     objectName = objectNameInit;
 
+#ifdef MDM_DEBUG_ENABLED
     DM_OUT << "MidiDeviceManager created - " << deviceName << " PID:" << PID;
+#endif
     port_in = -1;
     port_out = -1;
 
@@ -130,6 +132,12 @@ bool MidiDeviceManager::slotOpenMidiIn()
         DM_OUT << "OPEN MIDI IN ERR:" << (QString::fromStdString(error.getMessage()));
         return 0;
     }
+
+    if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
+    {
+        connected = true;
+        emit signalConnected(true);
+    }
     return 1;
 }
 
@@ -150,6 +158,11 @@ bool MidiDeviceManager::slotOpenMidiOut()
         /* Return the error */
         DM_OUT << "OPEN MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
         return 0;
+    }
+    if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
+    {
+        connected = true;
+        emit signalConnected(true);
     }
     return 1;
 }
@@ -179,7 +192,7 @@ bool MidiDeviceManager::slotCloseMidiIn()
     if (connected)
     {
         connected = false;
-        emit(signalConnected(false));
+        emit signalConnected(false);
     }
     return 1;
 }
@@ -204,7 +217,7 @@ bool MidiDeviceManager::slotCloseMidiOut()
     if (connected)
     {
         connected = false;
-        emit(signalConnected(false));
+        emit signalConnected(false);
     }
     return 1;
 }
@@ -276,13 +289,33 @@ void MidiDeviceManager::slotPollVersion()
 // ***** SysEx slots/functions ******************************************************
 // **********************************************************************************
 
+void MidiDeviceManager::slotSendSysExBA(QByteArray thisSysexArray)
+{
+    unsigned char *ucharArrayPtr;
+
+    // create a uchar pointer to the QByteArray
+    ucharArrayPtr = reinterpret_cast<unsigned char*>(thisSysexArray.data());
+
+    slotSendSysEx(ucharArrayPtr, thisSysexArray.size());
+}
+
+// takes a pointer and the size of the array
 void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 {
     DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
     ioGate = false; // pause any midi output while sending SysEx
-    midi_out->sendMessage( &message );
+
+    try
+    {
+        midi_out->sendMessage( &message );
+    }
+    catch (RtMidiError &error)
+    {
+        DM_OUT << "SYSEX SEND ERR:" << (QString::fromStdString(error.getMessage()));
+    }
+
     ioGate = true; // reopen gate
 
 }
@@ -358,6 +391,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // ***** All others *************************************
     else if (replyIndex == 0)
     {
+        if ((unsigned char)sysExMessageByteArray.at(9) == 1) bootloaderMode = true; // QuNexus bootloader = 1, confirm if this is consistent
+
         devicebootloaderVersion = sysExMessageByteArray.mid(12, 3);
         deviceFirmwareVersion = sysExMessageByteArray.mid(15, 3);
 
@@ -367,40 +402,111 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // process non fw/id SysEx Messages
     else
     {
+#ifdef MDM_DEBUG_ENABLED
         DM_OUT << "replyIndex: " << replyIndex;
         DM_OUT << "replyIndex12S: " << replyIndex12S;
         DM_OUT << "fwQueryReply12S: " << fwQueryReply12S;
         DM_OUT << "replyIndexSS: " << replyIndexSS;
         DM_OUT << "reply header: " << fwQueryReply;
         DM_OUT << "Unrecognized Syx: " << QString::fromStdString(sysExMessageByteArray.toStdString());;
+#endif
 
         // send SysEx to application
-        emit signalRxSysEx(sysExMessageByteArray, sysExMessageCharArray);
+        emit signalRxSysExBA(sysExMessageByteArray);
+        emit signalRxSysEx(sysExMessageCharArray);
 
         // leave function
         return;
     }
 
-    // process firmware connection messages
+    // process firmware version connection messages
     emit signalStopPolling();
 
-    if (deviceFirmwareVersion == applicationFirmwareVersion)
+    if (bootloaderMode)
+    {
+        DM_OUT << "Device in bootloader mode";
+        emit signalBootloaderMode();
+
+        // call the firmware update if it was requested
+        if (fwUpdateRequested) slotUpdateFirmware();
+    }
+    else if (deviceFirmwareVersion == applicationFirmwareVersion)
     {
         DM_OUT << "emit fw match - fwv: " << deviceFirmwareVersion << "cfwv: " << applicationFirmwareVersion;
         emit signalFirmwareDetected(this, true);
         emit signalConnected(true);
         connected = true;
+        //    emit signalProgressDialog("close", 0); // might be windows specific
     }
     else
     {
         DM_OUT << "emit fw mismatch - fwv: " << deviceFirmwareVersion << "cfwv: " << applicationFirmwareVersion;
-        emit signalFirmwareDetected(this, true);
+        emit signalFirmwareDetected(this, false);
+        //emit signalFirmwareMismatch(QString(devicebootloaderVersion), QString(applicationFirmwareVersion), QString(deviceFirmwareVersion));
     }
+
+}
+
+void MidiDeviceManager::slotOpenFirmwareFile(QString filePath)
+{
+    //Load Firmware File into a byte array
+    firmware = new QFile(filePath);
+    firmware->open(QIODevice::ReadOnly);
+    firmwareByteArray = firmware->readAll();
+}
+
+// set up the firmware update process - enter bootloader, wait, send ud
+void MidiDeviceManager::slotRequestFirmwareUpdate()
+{
+    fwUpdateRequested = true;
+
+    if(bootloaderMode)
+    {
+        qDebug() << "slotRequestFirmwareUpdate - was already in bootloader, updating";
+        slotUpdateFirmware();
+    }
+    else
+    {
+        // qunexus specific - request/store per key sensitivities
+        unsigned char sens[17] = { 0xF0, 0x00, 0x01, 0x5F, 0x7A, 0x19, 0x00, 0x01, 0x00, 0x02, 0x50, 0x01, 0x74, 0x3E, 0x00, 0x10, 0xF7};
+
+        qDebug() << "enter bootloader called from firmware request";
+
+        int versionSum = int(deviceFirmwareVersion.at(15))*100 + int(deviceFirmwareVersion.at(16))*10 + int(deviceFirmwareVersion.at(17));
+
+        if(versionSum >= 117)
+        {
+            slotSendSysEx(sens, sizeof(sens));
+        }
+        else
+        {
+            slotEnterBootloader();
+        }
+    }
+}
+
+void MidiDeviceManager::slotEnterBootloader()
+{
+    // TODO - this works for qunexus, add code for other controllers
+    slotSendSysEx(_bl_qunexus, sizeof(_bl_qunexus));
 }
 
 void MidiDeviceManager::slotUpdateFirmware()
 {
     DM_OUT << "empty slotUpdateFirmware called ";
+    if (firmwareByteArray.length() < 1)
+    {
+        qDebug() << "Firmware file not defined!";
+        return; // no file, should trip an error
+    }
+
+    //----------------------------- Signal Update Complete
+
+//    qDebug() << "Send the firmware!" << firmwareByteArray;
+//    emit signalProgressDialog("setup", firmwareByteArray.size());
+
+    //slotSendSysEx(firmwareByteArray, "QuNexus Port 1");
+//    emit signalFirmwareUpdateComplete();
 }
 
 
@@ -408,10 +514,24 @@ void MidiDeviceManager::slotUpdateFirmware()
 // ***** Channel and system common slots/functions **********************************
 // **********************************************************************************
 
+// overload
+void MidiDeviceManager::slotSendMIDI(uchar status)
+{
+    slotSendMIDI(status, 255, 255, 255);
+}
+void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1)
+{
+    slotSendMIDI(status, d1, 255, 255);
+}
+void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1, uchar d2)
+{
+    slotSendMIDI(status, d1, d2, 255);
+}
+
 // Send a MIDI message. Handles 1/2/3 byte packets. Chan goes last to allow 2/3 byte system common messages to omit channel
 void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 255, uchar chan = 255)
 {
-    DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4").arg(status).arg(d1).arg(d2).arg(chan);
+    //DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4").arg(status).arg(d1).arg(d2).arg(chan);
     uchar newStatus;
     std::vector<uchar> packet;
     packet.clear();
@@ -483,7 +603,9 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
         break;
     }
 
+#ifdef MDM_DEBUG_ENABLED
     DM_OUT << "Send MIDI - packet: " << packet;
+#endif
 
     // prepare and send the packet
     //std::vector<unsigned char> message(packet, packet+len);
@@ -512,7 +634,9 @@ void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
         data2 = packetArray[1];
     }
 
+#ifdef MDM_DEBUG_ENABLED
     DM_OUT << "Packet Received - status: " << status << " ch: " << chan << " d1: " << data1 << " d2: " << data2;
+#endif
 
     // emit raw packet, makes direct routing between ports simple
     emit signalRxMidi_raw(status, data1, data2, chan);
@@ -716,4 +840,3 @@ void MidiDeviceManager::midiInCallback( double deltatime, std::vector< unsigned 
         return; // do not send MIDI while sysex is transmitting
     }
 }
-

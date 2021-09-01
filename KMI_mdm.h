@@ -51,6 +51,9 @@ public:
     int PID;
     int initPID;
 
+    // connection status based on if firmware matches. Firmware dialogs are handled before this is set true.
+    bool connected;
+
     // RtMidi devices
     RtMidiIn *midi_in;
     RtMidiOut *midi_out;
@@ -74,6 +77,7 @@ public:
     QByteArray sysExMessage; //Message to be processed;
 
     //Describes whether or not a fw update has been requested-- useful for managing bootloader reconnects
+    bool bootloaderMode;
     bool fwUpdateRequested;
 
     QTimer* versionPoller;
@@ -100,7 +104,9 @@ signals:
 
     // detect firmware version
     void signalFirmwareDetected(MidiDeviceManager*, bool);
+    void signalFirmwareMismatch(QString, QString, QString);
     void signalStopPolling();
+    void signalBootloaderMode();
 
     // firmware update
     void signalProgressDialog(QString messageType, int val);
@@ -109,7 +115,8 @@ signals:
     void signalFwBytesLeft(int);
 
     // SysEx messages
-    void signalRxSysEx(QByteArray sysExMessageByteArray, std::vector< unsigned char > *message);
+    void signalRxSysExBA(QByteArray sysExMessageByteArray);
+    void signalRxSysEx(std::vector< unsigned char > *message);
 
     // channel messages
     void signalRxMidi_raw(uchar status, uchar d1, uchar d2, uchar chan);
@@ -148,12 +155,21 @@ public slots:
     void slotStartPolling();
     void slotStopPolling();
 
-    void slotSendSysEx(unsigned char *sysEx, int len);
+    void slotSendSysExBA(QByteArray thisSysexArray); // convert bytearray to unsigned char pointer
+    void slotSendSysEx(unsigned char *sysEx, int len); // takes a pointer and the size of the array
     void slotProcessSysEx(QByteArray sysExMessageByteArray, std::vector< unsigned char > *message);
 
+    void slotOpenFirmwareFile(QString filePath);
+    void slotRequestFirmwareUpdate();
+    void slotEnterBootloader();
     void slotUpdateFirmware();
 
+    // four prototypes for various packet sizes
+    void slotSendMIDI(uchar status);
+    void slotSendMIDI(uchar status, uchar d1);
+    void slotSendMIDI(uchar status, uchar d1, uchar d2);
     void slotSendMIDI(uchar status, uchar d1, uchar d2, uchar chan);
+
     void slotParsePacket(QByteArray packetArray);
     void slotRxParam(int rpn, uchar val, uchar chan, uchar rpn_datatype);
 
