@@ -298,7 +298,7 @@ void MidiDeviceManager::slotPollVersion()
             fwUpdateRequested = false;
             connected = false;
             bootloaderMode = false;
-            signalFirmwareUpdateComplete(false);
+            emit signalFirmwareUpdateComplete(false);
             return;
         }
         pollTimeout++;
@@ -471,8 +471,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         // call the firmware update if it was requested
         if (fwUpdateRequested)
         {
-            signalFwConsoleMessage("Device bootloader detected.\n"); // confirm enter bootloader and next line
-            signalFwProgress(10); // increment progress bar
+            emit signalFwConsoleMessage("Device bootloader detected.\n"); // confirm enter bootloader and next line
+            emit signalFwProgress(10); // increment progress bar
             slotUpdateFirmware();
         }
     }
@@ -562,7 +562,7 @@ void MidiDeviceManager::slotBootloaderTimeout()
     //delete timeoutFwBl;
     qDebug() << "slotBootloaderTimeout called - bootloaderMode: " << bootloaderMode;
     if (bootloaderMode) return;
-    signalFwConsoleMessage("\nPinging QuNexus for bootloader status...\n");
+    emit signalFwConsoleMessage("\nPinging QuNexus for bootloader status...\n");
     slotStartPolling(); // begin polling
 }
 
@@ -571,22 +571,22 @@ void MidiDeviceManager::slotUpdateFirmware()
     if (port_out_open == false)
     {
 #ifndef Q_OS_WIN
-        signalFwConsoleMessage("\nQuNexus not connected!\n");
+        emit signalFwConsoleMessage("\nQuNexus not connected!\n");
 #else
-        signalFwConsoleMessage("\nQuNexus MIDI driver not connected or unavailable.\n
-                               Windows cannot share standard USB MIDI drivers, try\n
-                               closing all programs, re-starting the QuNexus editor,\n
-                               and then reconnecting your QuNexus.\n");
+        emit signalFwConsoleMessage("\nQuNexus MIDI driver not connected or unavailable.\n"
+                               "Windows cannot share standard USB MIDI drivers, try\n"
+                               "closing all programs, re-starting the QuNexus editor,\n"
+                               "and then reconnecting your QuNexus.\n");
 #endif
         return;
     }
-    signalFwConsoleMessage("\nUpdating Firmware...\n");
-    signalFwProgress(50); // increment progress bar
+    emit signalFwConsoleMessage("\nUpdating Firmware...\n");
+    emit signalFwProgress(50); // increment progress bar
     DM_OUT << "empty slotUpdateFirmware called - size:" << firmwareByteArray.length();
     if (firmwareByteArray.length() < 1)
     {
         qDebug() << "Firmware file not defined!";
-        signalFwConsoleMessage("ERROR! Firmware file not found!");
+        emit signalFwConsoleMessage("ERROR! Firmware file not found!");
         return; // no file, should trip an error
     }
 
@@ -611,8 +611,8 @@ void MidiDeviceManager::slotFirmwareTimeout()
     qDebug() << "slotFirmwareTimeout called - fwUpdateRequested: " << fwUpdateRequested;
     if (!fwUpdateRequested) return;
 
-    signalFwProgress(80); // increment progress bar
-    signalFwConsoleMessage("\nPinging QuNexus for version info...\n");
+    emit signalFwProgress(80); // increment progress bar
+    emit signalFwConsoleMessage("\nPinging QuNexus for version info...\n");
     slotStartPolling(); // begin polling
 }
 
