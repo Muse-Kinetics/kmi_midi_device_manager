@@ -42,7 +42,7 @@ class MidiDeviceManager : public QWidget
 {
     Q_OBJECT
 public:
-    explicit MidiDeviceManager(QWidget *parent = 0, int initPID = -1, QString objectNameInit = "undefined");
+    explicit MidiDeviceManager(QWidget *parent = nullptr, int initPID = -1, QString objectNameInit = "undefined");
 
     // from device
     static void midiInCallback ( double deltatime, std::vector< unsigned char > *message, void *userData );
@@ -52,7 +52,9 @@ public:
     int initPID;
 
     // connection status based on if firmware matches. Firmware dialogs are handled before this is set true.
-    bool connected;
+    bool connected;             // flag if device firmware matches and is connected
+    bool port_in_open;          // flag if device input port is available and open
+    bool port_out_open;         // flag if device output port is available and open
 
     // RtMidi devices
     RtMidiIn *midi_in;
@@ -81,6 +83,7 @@ public:
     bool fwUpdateRequested;
 
     QTimer* versionPoller;
+    QTimer* timeoutFwBl;
 
     // stops MIDI if sysex is sending
     bool ioGate;
@@ -106,13 +109,16 @@ signals:
     void signalFirmwareDetected(MidiDeviceManager*, bool);
     void signalFirmwareMismatch(QString, QString, QString);
     void signalStopPolling();
-    void signalBootloaderMode();
+    void signalBootloaderMode(bool);
+    void signalConnected(bool);
 
     // firmware update
-    void signalProgressDialog(QString messageType, int val);
-    void signalFirmwareUpdateComplete();
-    void signalConnected(bool);
-    void signalFwBytesLeft(int);
+    void signalFwConsoleMessage(QString message);
+    void signalFwProgress(int thisPercent);
+    void signalFirmwareUpdateComplete(bool);
+    void signalFirmwareUpdateTimeout();
+    void signalBeginBlTimer();
+    void signalBeginFwTimer();
 
     // SysEx messages
     void signalRxSysExBA(QByteArray sysExMessageByteArray);
@@ -159,10 +165,16 @@ public slots:
     void slotSendSysEx(unsigned char *sysEx, int len); // takes a pointer and the size of the array
     void slotProcessSysEx(QByteArray sysExMessageByteArray, std::vector< unsigned char > *message);
 
+    // firmware update
     void slotOpenFirmwareFile(QString filePath);
     void slotRequestFirmwareUpdate();
     void slotEnterBootloader();
+    void slotBeginBlTimer();
+    void slotBootloaderTimeout();
     void slotUpdateFirmware();
+    void slotBeginFwTimer();
+    void slotFirmwareTimeout();
+    void slotFirmwareUpdateSuccess();
 
     // four prototypes for various packet sizes
     void slotSendMIDI(uchar status);

@@ -74,11 +74,20 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     // open gate
     ioGate = true;
 
+    // flags
+    connected = false;
+    port_in_open = false;
+    port_out_open = false;
     callbackIsSet = false;
     fwUpdateRequested = false;
 
-    connect(this, SIGNAL(signalStopPolling()), this, SLOT(slotStopPolling()));
+    // firmware and bootloader timeout timer
+    //timeoutFwBl = new QTimer(this);
 
+    // timers have to be triggered by these signals from the main thread
+    connect(this, SIGNAL(signalStopPolling()), this, SLOT(slotStopPolling()));
+    connect(this, SIGNAL(signalBeginBlTimer()), this, SLOT(slotBeginBlTimer()));
+    connect(this, SIGNAL(signalBeginFwTimer()), this, SLOT(slotBeginFwTimer()));
 }
 
 // **********************************************************************************
@@ -91,8 +100,10 @@ bool MidiDeviceManager::updatePortIn(int port)
     port_in = port;
     if (slotOpenMidiIn())
     {
+        port_in_open = true;
         return 1;
     }
+    port_in_open = false;
     return 0;
 }
 
@@ -102,8 +113,10 @@ bool MidiDeviceManager::updatePortOut(int port)
     port_out = port;
     if (slotOpenMidiOut())
     {
+        port_out_open = true;
         return 1;
     }
+    port_out_open = false;
     return 0;
 }
 
@@ -189,11 +202,10 @@ bool MidiDeviceManager::slotCloseMidiIn()
     }
 
     // alert host application that we are disconnected
-    if (connected)
-    {
-        connected = false;
-        emit signalConnected(false);
-    }
+    connected = false;
+    emit signalConnected(false);
+    bootloaderMode = false;
+    port_in_open = false;
     return 1;
 }
 
@@ -214,11 +226,13 @@ bool MidiDeviceManager::slotCloseMidiOut()
     }
 
     // alert host application that we are disconnected
-    if (connected)
+    if (connected) // check so we only emit once
     {
         connected = false;
         emit signalConnected(false);
     }
+    bootloaderMode = false;
+    port_out_open = false;
     return 1;
 }
 
@@ -266,10 +280,30 @@ void MidiDeviceManager::slotStopPolling()
 
 void MidiDeviceManager::slotPollVersion()
 {
+    qDebug() << "slotPollVersion called - in_open: " << port_in_open << " out_open: " << port_out_open;
+    static unsigned char pollTimeout;
     //DM_OUT << "\nslotPollVersion called";
 
     // ports aren't setup yet
-    if (port_in == -1 || port_out == -1) return;
+    if (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open)
+    {
+        if (!fwUpdateRequested) return;
+
+        qDebug() << "pollTimeout: " << pollTimeout;
+        // if we are polling during a firmware update request, try 5 times and then fail
+        if (pollTimeout > 5)
+        {
+            pollTimeout = 0;
+            slotStopPolling();
+            fwUpdateRequested = false;
+            connected = false;
+            bootloaderMode = false;
+            signalFirmwareUpdateComplete(false);
+            return;
+        }
+        pollTimeout++;
+
+    }
 
     if (deviceName == "SoftStep") // softStep doesn't use the universal syx dev id request
     {
@@ -279,7 +313,7 @@ void MidiDeviceManager::slotPollVersion()
     {
         slotSendSysEx(_fw_req_12step, sizeof(_fw_req_12step));
     }
-    else // every other product does (EB TODO - verify this with 12 step)
+    else // every other product
     {
         slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
     }
@@ -391,7 +425,14 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // ***** All others *************************************
     else if (replyIndex == 0)
     {
-        if ((unsigned char)sysExMessageByteArray.at(9) == 1) bootloaderMode = true; // QuNexus bootloader = 1, confirm if this is consistent
+        if ((unsigned char)sysExMessageByteArray.at(9) == 1)
+        {
+            bootloaderMode = true; // QuNexus bootloader = 1, confirm if this is consistent
+        }
+        else
+        {
+            bootloaderMode = false;
+        }
 
         devicebootloaderVersion = sysExMessageByteArray.mid(12, 3);
         deviceFirmwareVersion = sysExMessageByteArray.mid(15, 3);
@@ -425,18 +466,31 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     if (bootloaderMode)
     {
         DM_OUT << "Device in bootloader mode";
-        emit signalBootloaderMode();
+        emit signalBootloaderMode(fwUpdateRequested);
 
         // call the firmware update if it was requested
-        if (fwUpdateRequested) slotUpdateFirmware();
+        if (fwUpdateRequested)
+        {
+            signalFwConsoleMessage("Device bootloader detected.\n"); // confirm enter bootloader and next line
+            signalFwProgress(10); // increment progress bar
+            slotUpdateFirmware();
+        }
     }
     else if (deviceFirmwareVersion == applicationFirmwareVersion)
     {
         DM_OUT << "emit fw match - fwv: " << deviceFirmwareVersion << "cfwv: " << applicationFirmwareVersion;
-        emit signalFirmwareDetected(this, true);
-        emit signalConnected(true);
-        connected = true;
-        //    emit signalProgressDialog("close", 0); // might be windows specific
+
+        if (fwUpdateRequested) // wait for user to see update completed and click ok
+        {
+            emit signalFirmwareUpdateComplete(true);
+        }
+        else
+        {
+            emit signalFirmwareDetected(this, true);
+            emit signalConnected(true);
+            connected = true;
+        }
+
     }
     else
     {
@@ -467,46 +521,105 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
     }
     else
     {
-        // qunexus specific - request/store per key sensitivities
-        unsigned char sens[17] = { 0xF0, 0x00, 0x01, 0x5F, 0x7A, 0x19, 0x00, 0x01, 0x00, 0x02, 0x50, 0x01, 0x74, 0x3E, 0x00, 0x10, 0xF7};
+//        // qunexus specific - request/store per key sensitivities
+//        unsigned char sens[17] = { 0xF0, 0x00, 0x01, 0x5F, 0x7A, 0x19, 0x00, 0x01, 0x00, 0x02, 0x50, 0x01, 0x74, 0x3E, 0x00, 0x10, 0xF7};
 
-        qDebug() << "enter bootloader called from firmware request";
+//        qDebug() << "enter bootloader called from firmware request";
 
-        int versionSum = int(deviceFirmwareVersion.at(15))*100 + int(deviceFirmwareVersion.at(16))*10 + int(deviceFirmwareVersion.at(17));
+//        int versionSum = int(deviceFirmwareVersion.at(15))*100 + int(deviceFirmwareVersion.at(16))*10 + int(deviceFirmwareVersion.at(17));
 
-        if(versionSum >= 117)
-        {
-            slotSendSysEx(sens, sizeof(sens));
-        }
-        else
-        {
+//        if(versionSum >= 117)
+//        {
+//            slotSendSysEx(sens, sizeof(sens));
+//        }
+//        else
+//        {
             slotEnterBootloader();
-        }
+//        }
     }
 }
 
 void MidiDeviceManager::slotEnterBootloader()
 {
+    signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
+    signalFwProgress(20); // increment progress bar
     // TODO - this works for qunexus, add code for other controllers
     slotSendSysEx(_bl_qunexus, sizeof(_bl_qunexus));
+    qDebug() << "BL timeout counter started";
+    //timeoutFwBl = new QTimer(this);
+    //timeoutFwBl->singleShot(3000, this, SLOT(slotBootloaderTimeout()));
+    //QTimer::singleShot(3000, this, SLOT(slotBootloaderTimeout()));
+    emit signalBeginBlTimer();
+}
+
+void MidiDeviceManager::slotBeginBlTimer()
+{
+    QTimer::singleShot(3000, this, SLOT(slotBootloaderTimeout()));
+}
+
+void MidiDeviceManager::slotBootloaderTimeout()
+{
+    //delete timeoutFwBl;
+    qDebug() << "slotBootloaderTimeout called - bootloaderMode: " << bootloaderMode;
+    if (bootloaderMode) return;
+    signalFwConsoleMessage("\nPinging QuNexus for bootloader status...\n");
+    slotStartPolling(); // begin polling
 }
 
 void MidiDeviceManager::slotUpdateFirmware()
 {
-    DM_OUT << "empty slotUpdateFirmware called ";
+    if (port_out_open == false)
+    {
+#ifndef Q_OS_WIN
+        signalFwConsoleMessage("\nQuNexus not connected!\n");
+#else
+        signalFwConsoleMessage("\nQuNexus MIDI driver not connected or unavailable.\n
+                               Windows cannot share standard USB MIDI drivers, try\n
+                               closing all programs, re-starting the QuNexus editor,\n
+                               and then reconnecting your QuNexus.\n");
+#endif
+        return;
+    }
+    signalFwConsoleMessage("\nUpdating Firmware...\n");
+    signalFwProgress(50); // increment progress bar
+    DM_OUT << "empty slotUpdateFirmware called - size:" << firmwareByteArray.length();
     if (firmwareByteArray.length() < 1)
     {
         qDebug() << "Firmware file not defined!";
+        signalFwConsoleMessage("ERROR! Firmware file not found!");
         return; // no file, should trip an error
     }
 
-    //----------------------------- Signal Update Complete
+    slotSendSysExBA(firmwareByteArray);
 
-//    qDebug() << "Send the firmware!" << firmwareByteArray;
-//    emit signalProgressDialog("setup", firmwareByteArray.size());
+    qDebug() << "FW timeout counter started";
 
-    //slotSendSysEx(firmwareByteArray, "QuNexus Port 1");
-//    emit signalFirmwareUpdateComplete();
+    //timeoutFwBl = new QTimer(this);
+    //timeoutFwBl->singleShot(12000, this, SLOT(slotFirmwareTimeout()));
+    //QTimer::singleShot(12000, this, SLOT(slotFirmwareTimeout()));
+    emit signalBeginFwTimer();
+}
+
+void MidiDeviceManager::slotBeginFwTimer()
+{
+    QTimer::singleShot(14000, this, SLOT(slotFirmwareTimeout()));
+}
+
+void MidiDeviceManager::slotFirmwareTimeout()
+{
+    //delete timeoutFwBl;
+    qDebug() << "slotFirmwareTimeout called - fwUpdateRequested: " << fwUpdateRequested;
+    if (!fwUpdateRequested) return;
+
+    signalFwProgress(80); // increment progress bar
+    signalFwConsoleMessage("\nPinging QuNexus for version info...\n");
+    slotStartPolling(); // begin polling
+}
+
+void MidiDeviceManager::slotFirmwareUpdateSuccess()
+{
+    fwUpdateRequested = false;
+    bootloaderMode = false;
 }
 
 
