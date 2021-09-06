@@ -437,7 +437,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         devicebootloaderVersion = sysExMessageByteArray.mid(12, 3);
         deviceFirmwareVersion = sysExMessageByteArray.mid(15, 3);
 
-        DM_OUT << "ID Reply - BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion << " fullMsg: " << sysExMessageByteArray;
+        DM_OUT << "ID Reply - BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion; // << " fullMsg: " << sysExMessageByteArray;
     }
 
     // process non fw/id SysEx Messages
