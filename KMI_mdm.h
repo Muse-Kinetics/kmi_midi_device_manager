@@ -79,6 +79,7 @@ public:
     QByteArray sysExMessage; //Message to be processed;
 
     //Describes whether or not a fw update has been requested-- useful for managing bootloader reconnects
+    bool globalsRequested; // flag if we are storing global data to restore after update
     bool bootloaderMode;
     bool fwUpdateRequested;
 
@@ -119,6 +120,9 @@ signals:
     void signalFirmwareUpdateTimeout();
     void signalBeginBlTimer();
     void signalBeginFwTimer();
+
+    void signalRequestGlobals();
+    void signalRestoreGlobals();
 
     // SysEx messages
     void signalRxSysExBA(QByteArray sysExMessageByteArray);
