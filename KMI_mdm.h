@@ -85,6 +85,8 @@ public:
 
     QTimer* versionPoller;
     QTimer* timeoutFwBl;
+    QTimer* timeoutGlobalsReq;
+    int globalsTimerCount;
 
     // stops MIDI if sysex is sending
     bool ioGate;
@@ -164,6 +166,8 @@ public slots:
     void slotPollVersion();
     void slotStartPolling();
     void slotStopPolling();
+    void slotStartGlobalsTimer();
+    void slotCheckGlobalsReceived();
 
     void slotSendSysExBA(QByteArray thisSysexArray); // convert bytearray to unsigned char pointer
     void slotSendSysEx(unsigned char *sysEx, int len); // takes a pointer and the size of the array
@@ -178,7 +182,7 @@ public slots:
     void slotUpdateFirmware();
     void slotBeginFwTimer();
     void slotFirmwareTimeout();
-    void slotFirmwareUpdateSuccess();
+    void slotFirmwareUpdateReset();
 
     // four prototypes for various packet sizes
     void slotSendMIDI(uchar status);

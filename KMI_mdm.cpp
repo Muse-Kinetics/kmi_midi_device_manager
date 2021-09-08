@@ -256,6 +256,7 @@ void MidiDeviceManager::slotSetExpectedFW(QByteArray fwVer)
 // timer to regularly ping the device for firmware info and to confirm connection
 void MidiDeviceManager::slotStartPolling()
 {
+    DM_OUT << "slotStartPolling called";
     int pollTime;
 
     versionPoller = new QTimer(this);
@@ -281,7 +282,7 @@ void MidiDeviceManager::slotStopPolling()
 
 void MidiDeviceManager::slotPollVersion()
 {
-    qDebug() << "slotPollVersion called - in_open: " << port_in_open << " out_open: " << port_out_open;
+    DM_OUT << "slotPollVersion called - in_open: " << port_in_open << " out_open: " << port_out_open;
     static unsigned char pollTimeout;
     //DM_OUT << "\nslotPollVersion called";
 
@@ -290,16 +291,12 @@ void MidiDeviceManager::slotPollVersion()
     {
         if (!fwUpdateRequested) return;
 
-        qDebug() << "pollTimeout: " << pollTimeout;
+        DM_OUT << "pollTimeout: " << pollTimeout;
         // if we are polling during a firmware update request, try 5 times and then fail
         if (pollTimeout > 5)
         {
-            pollTimeout = 0;
-            slotStopPolling();
-            fwUpdateRequested = false;
-            globalsRequested = false;
+            slotFirmwareUpdateReset();
             connected = false;
-            bootloaderMode = false;
             emit signalFirmwareUpdateComplete(false);
             return;
         }
@@ -318,6 +315,35 @@ void MidiDeviceManager::slotPollVersion()
     else // every other product
     {
         slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+    }
+}
+
+void MidiDeviceManager::slotStartGlobalsTimer()
+{
+    DM_OUT << "slotStartGlobalsTimer called";
+    globalsTimerCount = 0;
+    timeoutGlobalsReq = new QTimer(this);
+    connect(timeoutGlobalsReq, SIGNAL(timeout()), this, SLOT(slotCheckGlobalsReceived()));
+    timeoutGlobalsReq->start(1000); // ping every second to see if globals have been received
+}
+
+void MidiDeviceManager::slotCheckGlobalsReceived()
+{
+    DM_OUT << "slotCheckGlobalsReceived called - globalsTimerCount: " << globalsTimerCount;
+
+    if (globalsTimerCount < 5) // under timeout threshold
+    {
+        emit signalRequestGlobals(); // ping again
+        globalsTimerCount++;
+    }
+    else
+    {
+        DM_OUT << "globals request timeout";
+        timeoutGlobalsReq->stop(); // stop timer
+        globalsTimerCount = 0; // clear timeout count
+        slotFirmwareUpdateReset(); // reset flags
+        emit signalFwConsoleMessage("\nERROR: No response to Globals request.");
+        emit signalFirmwareUpdateComplete(false); // signal failure
     }
 }
 
@@ -363,7 +389,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 // *************************************************
 void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::vector< unsigned char > *sysExMessageCharArray)
 {
-    // DM_OUT << "slotProcessSysEx called - PID: " << PID << " deviceName: " << deviceName;
+    DM_OUT << "slotProcessSysEx called - PID: " << PID << " deviceName: " << deviceName;
 
     // Test for feedback loop
     QByteArray feedbackLoopTest(reinterpret_cast<char*>(_sx_ack_loop_test), sizeof(_sx_ack_loop_test));
@@ -454,6 +480,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         DM_OUT << "Unrecognized Syx: " << QString::fromStdString(sysExMessageByteArray.toStdString());;
 #endif
 
+        DM_OUT << "passing SysEx to applicaiton";
         // send SysEx to application
         emit signalRxSysExBA(sysExMessageByteArray);
         emit signalRxSysEx(sysExMessageCharArray);
@@ -521,11 +548,13 @@ void MidiDeviceManager::slotOpenFirmwareFile(QString filePath)
 // set up the firmware update process - enter bootloader, wait, send ud
 void MidiDeviceManager::slotRequestFirmwareUpdate()
 {
-    qDebug() << "slotRequestFirmwareUpdate - fwUpdteRequested: " << fwUpdateRequested << " bootloaderMode: " << bootloaderMode << " globalsRequested: " << globalsRequested;
+    DM_OUT << "slotRequestFirmwareUpdate - fwUpdteRequested: " << fwUpdateRequested << " bootloaderMode: " << bootloaderMode << " globalsRequested: " << globalsRequested;
     fwUpdateRequested = true;
 
     if(bootloaderMode)
     {
+        timeoutGlobalsReq->stop(); // stop timer (just to be safe)
+        slotStopPolling(); // stop polling (just to be safe)
         slotUpdateFirmware();
     }
     else
@@ -533,20 +562,26 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
 //        // qunexus specific - request/store per key sensitivities
 //        unsigned char sens[17] = { 0xF0, 0x00, 0x01, 0x5F, 0x7A, 0x19, 0x00, 0x01, 0x00, 0x02, 0x50, 0x01, 0x74, 0x3E, 0x00, 0x10, 0xF7};
 
-//        qDebug() << "enter bootloader called from firmware request";
+//        DM_OUT << "enter bootloader called from firmware request";
 
 //        int versionSum = int(deviceFirmwareVersion.at(15))*100 + int(deviceFirmwareVersion.at(16))*10 + int(deviceFirmwareVersion.at(17));
 
         if(globalsRequested) // this flag is set if we've received globals and called slotReQuestFirmwareUpdate again
         {
-            signalFwConsoleMessage("\nGlobals Saved.");
+            DM_OUT << "Globals received, stop timer and enter bootloader";
+            timeoutGlobalsReq->stop(); // stop timer
+            globalsTimerCount = 0; // reset timer count
+
+            emit signalFwConsoleMessage("\nGlobals Saved.");
             emit signalFwProgress(25); // increment progress bar
             slotEnterBootloader();  // enter bootloader, which will start firmware request
         }
         else
         {
+            DM_OUT << "Begin globals backup - send request and start timer";
             globalsRequested = true; // set flag, it gets cleared when firmware completes or times out
             emit signalRequestGlobals();
+            slotStartGlobalsTimer(); // start the timer
             emit signalFwProgress(10); // increment progress bar
             signalFwConsoleMessage("\nBacking up QuNexus global settings...");
         }
@@ -559,19 +594,20 @@ void MidiDeviceManager::slotEnterBootloader()
     signalFwProgress(20); // increment progress bar
     // TODO - this works for qunexus, add code for other controllers
     slotSendSysEx(_bl_qunexus, sizeof(_bl_qunexus));
-    qDebug() << "BL timeout counter started";
+    DM_OUT << "BL timeout counter started";
     emit signalBeginBlTimer();
 }
 
 void MidiDeviceManager::slotBeginBlTimer()
 {
+    DM_OUT << "slotBeginBlTimer called";
     QTimer::singleShot(3000, this, SLOT(slotBootloaderTimeout()));
 }
 
 void MidiDeviceManager::slotBootloaderTimeout()
 {
     //delete timeoutFwBl;
-    qDebug() << "slotBootloaderTimeout called - bootloaderMode: " << bootloaderMode;
+    DM_OUT << "slotBootloaderTimeout called - bootloaderMode: " << bootloaderMode;
     if (bootloaderMode) return;
     emit signalFwConsoleMessage("\nPinging QuNexus for bootloader status...\n");
     slotStartPolling(); // begin polling
@@ -579,6 +615,7 @@ void MidiDeviceManager::slotBootloaderTimeout()
 
 void MidiDeviceManager::slotUpdateFirmware()
 {
+    DM_OUT << "slotUpdateFirmware called - port_out_open: " << port_out_open << " fw .syx size: " << firmwareByteArray.length();
     if (port_out_open == false)
     {
 #ifndef Q_OS_WIN
@@ -593,29 +630,30 @@ void MidiDeviceManager::slotUpdateFirmware()
     }
     emit signalFwConsoleMessage("\nUpdating Firmware...\n");
     emit signalFwProgress(50); // increment progress bar
-    DM_OUT << "empty slotUpdateFirmware called - size:" << firmwareByteArray.length();
+
     if (firmwareByteArray.length() < 1)
     {
-        qDebug() << "Firmware file not defined!";
+        DM_OUT << "Firmware file not defined!";
         emit signalFwConsoleMessage("ERROR! Firmware file not found!");
         return; // no file, should trip an error
     }
-
+    DM_OUT << "sending firmware sysex";
     slotSendSysExBA(firmwareByteArray);
 
-    qDebug() << "FW timeout counter started";
+    DM_OUT << "FW timeout counter started";
     emit signalBeginFwTimer();
 }
 
 void MidiDeviceManager::slotBeginFwTimer()
 {
+    DM_OUT << "slotBeginFwTimer called";
     QTimer::singleShot(14000, this, SLOT(slotFirmwareTimeout()));
 }
 
 void MidiDeviceManager::slotFirmwareTimeout()
 {
     //delete timeoutFwBl;
-    qDebug() << "slotFirmwareTimeout called - fwUpdateRequested: " << fwUpdateRequested;
+    DM_OUT << "slotFirmwareTimeout called - fwUpdateRequested: " << fwUpdateRequested;
     if (!fwUpdateRequested) return;
 
     emit signalFwProgress(75); // increment progress bar
@@ -623,8 +661,9 @@ void MidiDeviceManager::slotFirmwareTimeout()
     slotStartPolling(); // begin polling
 }
 
-void MidiDeviceManager::slotFirmwareUpdateSuccess()
+void MidiDeviceManager::slotFirmwareUpdateReset()
 {
+    DM_OUT << "slotFirmwareUpdateReset called";
     fwUpdateRequested = false;
     bootloaderMode = false;
     globalsRequested = false;
