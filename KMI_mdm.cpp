@@ -277,7 +277,7 @@ void MidiDeviceManager::slotStartPolling()
 
 void MidiDeviceManager::slotStopPolling()
 {
-    versionPoller->stop();
+    if (versionPoller != NULL) versionPoller->stop();
 }
 
 void MidiDeviceManager::slotPollVersion()
@@ -339,7 +339,7 @@ void MidiDeviceManager::slotCheckGlobalsReceived()
     else
     {
         DM_OUT << "globals request timeout";
-        timeoutGlobalsReq->stop(); // stop timer
+        if (timeoutGlobalsReq != NULL) timeoutGlobalsReq->stop(); // stop timer
         globalsTimerCount = 0; // clear timeout count
         slotFirmwareUpdateReset(); // reset flags
         emit signalFwConsoleMessage("\nERROR: No response to Globals request.");
@@ -553,7 +553,7 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
 
     if(bootloaderMode)
     {
-        timeoutGlobalsReq->stop(); // stop timer (just to be safe)
+        if (timeoutGlobalsReq != NULL) timeoutGlobalsReq->stop(); // stop timer (just to be safe)
         slotStopPolling(); // stop polling (just to be safe)
         slotUpdateFirmware();
     }
@@ -569,7 +569,7 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
         if(globalsRequested) // this flag is set if we've received globals and called slotReQuestFirmwareUpdate again
         {
             DM_OUT << "Globals received, stop timer and enter bootloader";
-            timeoutGlobalsReq->stop(); // stop timer
+            if (timeoutGlobalsReq != NULL) timeoutGlobalsReq->stop(); // stop timer
             globalsTimerCount = 0; // reset timer count
 
             emit signalFwConsoleMessage("\nGlobals Saved.");
@@ -647,7 +647,7 @@ void MidiDeviceManager::slotUpdateFirmware()
 void MidiDeviceManager::slotBeginFwTimer()
 {
     DM_OUT << "slotBeginFwTimer called";
-    QTimer::singleShot(14000, this, SLOT(slotFirmwareTimeout()));
+    QTimer::singleShot(30000, this, SLOT(slotFirmwareTimeout()));
 }
 
 void MidiDeviceManager::slotFirmwareTimeout()
