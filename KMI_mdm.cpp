@@ -89,6 +89,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     connect(this, SIGNAL(signalStopPolling()), this, SLOT(slotStopPolling()));
     connect(this, SIGNAL(signalBeginBlTimer()), this, SLOT(slotBeginBlTimer()));
     connect(this, SIGNAL(signalBeginFwTimer()), this, SLOT(slotBeginFwTimer()));
+    connect(this, SIGNAL(signalStopGlobalTimer()), this, SLOT(slotStopGlobalTimer()));
 }
 
 // **********************************************************************************
@@ -275,15 +276,15 @@ void MidiDeviceManager::slotStartPolling()
     versionPoller->start(pollTime);
 }
 
-void MidiDeviceManager::slotStopPolling()
+void MidiDeviceManager::slotStopPolling() // this has to be called from an emitted signal so that it's handled in the main thread
 {
-    if (versionPoller != NULL) versionPoller->stop();
+    versionPoller->stop();
 }
 
 void MidiDeviceManager::slotPollVersion()
 {
     DM_OUT << "slotPollVersion called - in_open: " << port_in_open << " out_open: " << port_out_open;
-    static unsigned char pollTimeout;
+
     //DM_OUT << "\nslotPollVersion called";
 
     // ports aren't setup yet
@@ -298,6 +299,7 @@ void MidiDeviceManager::slotPollVersion()
             slotFirmwareUpdateReset();
             connected = false;
             emit signalFirmwareUpdateComplete(false);
+            slotStopPolling();
             return;
         }
         pollTimeout++;
@@ -327,6 +329,11 @@ void MidiDeviceManager::slotStartGlobalsTimer()
     timeoutGlobalsReq->start(1000); // ping every second to see if globals have been received
 }
 
+void MidiDeviceManager::slotStopGlobalTimer()
+{
+    timeoutGlobalsReq->stop(); // stop timer
+}
+
 void MidiDeviceManager::slotCheckGlobalsReceived()
 {
     DM_OUT << "slotCheckGlobalsReceived called - globalsTimerCount: " << globalsTimerCount;
@@ -339,8 +346,7 @@ void MidiDeviceManager::slotCheckGlobalsReceived()
     else
     {
         DM_OUT << "globals request timeout";
-        if (timeoutGlobalsReq != NULL) timeoutGlobalsReq->stop(); // stop timer
-        globalsTimerCount = 0; // clear timeout count
+        emit signalStopGlobalTimer();
         slotFirmwareUpdateReset(); // reset flags
         emit signalFwConsoleMessage("\nERROR: No response to Globals request.");
         emit signalFirmwareUpdateComplete(false); // signal failure
@@ -364,7 +370,7 @@ void MidiDeviceManager::slotSendSysExBA(QByteArray thisSysexArray)
 // takes a pointer and the size of the array
 void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 {
-    DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
+    DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID << " RtMidi SysEx Packet Size: " << __MACOSX_SYX_XMIT_SIZE__;
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
     ioGate = false; // pause any midi output while sending SysEx
@@ -376,6 +382,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     catch (RtMidiError &error)
     {
         DM_OUT << "SYSEX SEND ERR:" << (QString::fromStdString(error.getMessage()));
+        emit signalFwConsoleMessage("SYSEX SEND ERR:" + (QString::fromStdString(error.getMessage())));
     }
 
     ioGate = true; // reopen gate
@@ -553,8 +560,13 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
 
     if(bootloaderMode)
     {
-        if (timeoutGlobalsReq != NULL) timeoutGlobalsReq->stop(); // stop timer (just to be safe)
-        slotStopPolling(); // stop polling (just to be safe)
+        //DM_OUT << "test globalreq timer";
+        //emit signalStopGlobalTimer();
+
+        //DM_OUT << "stop polling";
+        //emit signalStopPolling();
+
+        DM_OUT << "slotupdatefirmware";
         slotUpdateFirmware();
     }
     else
@@ -569,8 +581,8 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
         if(globalsRequested) // this flag is set if we've received globals and called slotReQuestFirmwareUpdate again
         {
             DM_OUT << "Globals received, stop timer and enter bootloader";
-            if (timeoutGlobalsReq != NULL) timeoutGlobalsReq->stop(); // stop timer
-            globalsTimerCount = 0; // reset timer count
+            emit signalStopGlobalTimer();
+            emit signalStopPolling();
 
             emit signalFwConsoleMessage("\nGlobals Saved.");
             emit signalFwProgress(25); // increment progress bar
@@ -637,8 +649,46 @@ void MidiDeviceManager::slotUpdateFirmware()
         emit signalFwConsoleMessage("ERROR! Firmware file not found!");
         return; // no file, should trip an error
     }
+
+    // reworked for big sur, need to send in blocks rather than one large packet
     DM_OUT << "sending firmware sysex";
-    slotSendSysExBA(firmwareByteArray);
+
+//    int blockSize = 10000; // break the sysex file into blocks this big
+//    int waitTime = 500; // wait this ammount of time between sending blocks
+//    int blockNumber = 0;
+//    QByteArray thisPayload = firmwareByteArray; // temporarily store payload
+//    QElapsedTimer blockTimer;
+
+//    while (thisPayload.length() > 0)
+//    {
+//        if (thisPayload.length() > blockSize)
+//        {
+//            DM_OUT << "Sending block #: " << blockNumber++ << " size: " << blockSize;
+//            slotSendSysExBA(thisPayload.left(blockSize)); // send a block
+//            // remove block from packet
+//            thisPayload = thisPayload.mid(blockSize + 1, // start at the byte after this block
+//                                        thisPayload.length() - blockSize); // the remainder of the packet
+//            DM_OUT << "Remaining payload size: " <<  thisPayload.length();
+//            DM_OUT << "";
+//        }
+//        else
+//        {
+//            DM_OUT << "Sending final block #: " << blockNumber++ << " size: " << thisPayload.length();
+//            slotSendSysExBA(thisPayload); // send the remainder of the packet
+//            thisPayload = ""; // clear the packet
+//        }
+
+//        DM_OUT << "Wait " << waitTime << "ms";
+//        DM_OUT << "";
+//        blockTimer.start();
+//        while (blockTimer.elapsed() < waitTime)
+//        {
+//            continue;
+//        }
+
+//    }
+
+    slotSendSysExBA(firmwareByteArray); // send the remainder of the packet
 
     DM_OUT << "FW timeout counter started";
     emit signalBeginFwTimer();
@@ -647,7 +697,7 @@ void MidiDeviceManager::slotUpdateFirmware()
 void MidiDeviceManager::slotBeginFwTimer()
 {
     DM_OUT << "slotBeginFwTimer called";
-    QTimer::singleShot(30000, this, SLOT(slotFirmwareTimeout()));
+    QTimer::singleShot(15000, this, SLOT(slotFirmwareTimeout()));
 }
 
 void MidiDeviceManager::slotFirmwareTimeout()

@@ -19,6 +19,7 @@
 #include <QtGui>
 #include <QApplication>
 #include <QTimer>
+#include <QElapsedTimer>
 
 #include "RtMidi.h"
 
@@ -86,6 +87,9 @@ public:
     QTimer* versionPoller;
     QTimer* timeoutFwBl;
     QTimer* timeoutGlobalsReq;
+
+    // counters to timeout timers
+    unsigned char pollTimeout;
     int globalsTimerCount;
 
     // stops MIDI if sysex is sending
@@ -112,6 +116,7 @@ signals:
     void signalFirmwareDetected(MidiDeviceManager*, bool);
     void signalFirmwareMismatch(QString, QString, QString);
     void signalStopPolling();
+    void signalStopGlobalTimer();
     void signalBootloaderMode(bool);
     void signalConnected(bool);
 
@@ -167,6 +172,7 @@ public slots:
     void slotStartPolling();
     void slotStopPolling();
     void slotStartGlobalsTimer();
+    void slotStopGlobalTimer();
     void slotCheckGlobalsReceived();
 
     void slotSendSysExBA(QByteArray thisSysexArray); // convert bytearray to unsigned char pointer
