@@ -442,6 +442,15 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // ***** QuNeo ****************************************
     else if (replyIndex == 0 && deviceName == "QuNeo")
     {
+        if ((unsigned char)sysExMessageByteArray.at(9) == 1)
+        {
+            bootloaderMode = true;
+        }
+        else
+        {
+            bootloaderMode = false;
+        }
+
         // reset
         devicebootloaderVersion.clear();
         deviceFirmwareVersion.clear();
@@ -462,7 +471,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     {
         if ((unsigned char)sysExMessageByteArray.at(9) == 1)
         {
-            bootloaderMode = true; // QuNexus bootloader = 1, confirm if this is consistent
+            bootloaderMode = true;
         }
         else
         {
@@ -558,44 +567,41 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
     DM_OUT << "slotRequestFirmwareUpdate - fwUpdteRequested: " << fwUpdateRequested << " bootloaderMode: " << bootloaderMode << " globalsRequested: " << globalsRequested;
     fwUpdateRequested = true;
 
-    if(bootloaderMode)
+    if (bootloaderMode)
     {
-        //DM_OUT << "test globalreq timer";
-        //emit signalStopGlobalTimer();
-
-        //DM_OUT << "stop polling";
-        //emit signalStopPolling();
-
         DM_OUT << "slotupdatefirmware";
         slotUpdateFirmware();
     }
     else
     {
-//        // qunexus specific - request/store per key sensitivities
-//        unsigned char sens[17] = { 0xF0, 0x00, 0x01, 0x5F, 0x7A, 0x19, 0x00, 0x01, 0x00, 0x02, 0x50, 0x01, 0x74, 0x3E, 0x00, 0x10, 0xF7};
-
-//        DM_OUT << "enter bootloader called from firmware request";
-
-//        int versionSum = int(deviceFirmwareVersion.at(15))*100 + int(deviceFirmwareVersion.at(16))*10 + int(deviceFirmwareVersion.at(17));
-
-        if(globalsRequested) // this flag is set if we've received globals and called slotReQuestFirmwareUpdate again
+        // handle devices with global settings to back up before updating fw
+        if (PID == PID_QUNEXUS)
         {
-            DM_OUT << "Globals received, stop timer and enter bootloader";
-            emit signalStopGlobalTimer();
-            emit signalStopPolling();
+            if (globalsRequested) // this flag is set if we've received globals and called slotReQuestFirmwareUpdate again
+            {
+                DM_OUT << "Globals received, stop timer and enter bootloader";
+                emit signalStopGlobalTimer();
+                emit signalStopPolling();
 
-            emit signalFwConsoleMessage("\nGlobals Saved.");
-            emit signalFwProgress(25); // increment progress bar
-            slotEnterBootloader();  // enter bootloader, which will start firmware request
+                emit signalFwConsoleMessage("\nGlobals Saved.");
+                emit signalFwProgress(25); // increment progress bar
+                slotEnterBootloader();  // enter bootloader, which will start firmware request
+            }
+            else
+            {
+                DM_OUT << "Begin globals backup - send request and start timer";
+                globalsRequested = true; // set flag, it gets cleared when firmware completes or times out
+                emit signalRequestGlobals();
+                slotStartGlobalsTimer(); // start the timer
+                emit signalFwProgress(10); // increment progress bar
+                signalFwConsoleMessage(QString("\nBacking up %1 global settings...").arg(deviceName));
+            }
         }
+        // handle devices that don't have anything to back up before fw update
         else
         {
-            DM_OUT << "Begin globals backup - send request and start timer";
-            globalsRequested = true; // set flag, it gets cleared when firmware completes or times out
-            emit signalRequestGlobals();
-            slotStartGlobalsTimer(); // start the timer
-            emit signalFwProgress(10); // increment progress bar
-            signalFwConsoleMessage("\nBacking up QuNexus global settings...");
+            emit signalFwProgress(25); // increment progress bar
+            slotEnterBootloader();  // enter bootloader, which will start firmware request
         }
     }
 }
@@ -605,7 +611,18 @@ void MidiDeviceManager::slotEnterBootloader()
     signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
     signalFwProgress(20); // increment progress bar
     // TODO - this works for qunexus, add code for other controllers
-    slotSendSysEx(_bl_qunexus, sizeof(_bl_qunexus));
+    switch (PID)
+    {
+    case PID_QUNEXUS:
+        slotSendSysEx(_bl_qunexus, sizeof(_bl_qunexus));
+        break;
+    case PID_QUNEO:
+        slotSendSysEx(_bl_quneo, sizeof(_bl_quneo));
+        break;
+    default:
+        DM_OUT << "bootloader command not configured for this device";
+    }
+
     DM_OUT << "BL timeout counter started";
     emit signalBeginBlTimer();
 }
@@ -621,7 +638,7 @@ void MidiDeviceManager::slotBootloaderTimeout()
     //delete timeoutFwBl;
     DM_OUT << "slotBootloaderTimeout called - bootloaderMode: " << bootloaderMode;
     if (bootloaderMode) return;
-    emit signalFwConsoleMessage("\nPinging QuNexus for bootloader status...\n");
+    emit signalFwConsoleMessage(QString("\nPinging %1 for bootloader status...\n").arg(deviceName));
     slotStartPolling(); // begin polling
 }
 
@@ -631,12 +648,12 @@ void MidiDeviceManager::slotUpdateFirmware()
     if (port_out_open == false)
     {
 #ifndef Q_OS_WIN
-        emit signalFwConsoleMessage("\nQuNexus not connected!\n");
+        emit signalFwConsoleMessage(QString("\%1 not connected!\n").arg(deviceName));
 #else
-        emit signalFwConsoleMessage("\nQuNexus MIDI driver not connected or unavailable.\n"
+        emit signalFwConsoleMessage(QString("\%1 MIDI driver not connected or unavailable.\n"
                                "Windows cannot share standard USB MIDI drivers, try\n"
-                               "closing all programs, re-starting the QuNexus editor,\n"
-                               "and then reconnecting your QuNexus.\n");
+                               "closing all programs, re-starting the %1 editor,\n"
+                               "and then reconnecting your %1.\n").arg(deviceName));
 #endif
         return;
     }
@@ -707,7 +724,7 @@ void MidiDeviceManager::slotFirmwareTimeout()
     if (!fwUpdateRequested) return;
 
     emit signalFwProgress(75); // increment progress bar
-    emit signalFwConsoleMessage("\nPinging QuNexus for version info...\n");
+    emit signalFwConsoleMessage("\nPinging Device for version info...\n");
     slotStartPolling(); // begin polling
 }
 
