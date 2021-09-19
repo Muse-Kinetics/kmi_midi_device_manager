@@ -370,7 +370,7 @@ void MidiDeviceManager::slotSendSysExBA(QByteArray thisSysexArray)
 // takes a pointer and the size of the array
 void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 {
-    DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID << " RtMidi SysEx Packet Size: " << __MACOSX_SYX_XMIT_SIZE__;
+    DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
     ioGate = false; // pause any midi output while sending SysEx
@@ -667,45 +667,9 @@ void MidiDeviceManager::slotUpdateFirmware()
         return; // no file, should trip an error
     }
 
-    // reworked for big sur, need to send in blocks rather than one large packet
     DM_OUT << "sending firmware sysex";
 
-//    int blockSize = 10000; // break the sysex file into blocks this big
-//    int waitTime = 500; // wait this ammount of time between sending blocks
-//    int blockNumber = 0;
-//    QByteArray thisPayload = firmwareByteArray; // temporarily store payload
-//    QElapsedTimer blockTimer;
-
-//    while (thisPayload.length() > 0)
-//    {
-//        if (thisPayload.length() > blockSize)
-//        {
-//            DM_OUT << "Sending block #: " << blockNumber++ << " size: " << blockSize;
-//            slotSendSysExBA(thisPayload.left(blockSize)); // send a block
-//            // remove block from packet
-//            thisPayload = thisPayload.mid(blockSize + 1, // start at the byte after this block
-//                                        thisPayload.length() - blockSize); // the remainder of the packet
-//            DM_OUT << "Remaining payload size: " <<  thisPayload.length();
-//            DM_OUT << "";
-//        }
-//        else
-//        {
-//            DM_OUT << "Sending final block #: " << blockNumber++ << " size: " << thisPayload.length();
-//            slotSendSysExBA(thisPayload); // send the remainder of the packet
-//            thisPayload = ""; // clear the packet
-//        }
-
-//        DM_OUT << "Wait " << waitTime << "ms";
-//        DM_OUT << "";
-//        blockTimer.start();
-//        while (blockTimer.elapsed() < waitTime)
-//        {
-//            continue;
-//        }
-
-//    }
-
-    slotSendSysExBA(firmwareByteArray); // send the remainder of the packet
+    slotSendSysExBA(firmwareByteArray); // send firmware
 
     DM_OUT << "FW timeout counter started";
     emit signalBeginFwTimer();
