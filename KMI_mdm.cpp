@@ -991,7 +991,12 @@ void MidiDeviceManager::midiInCallback( double deltatime, std::vector< unsigned 
     MidiDeviceManager * thisMidiDeviceManager;
     thisMidiDeviceManager = (MidiDeviceManager*) thisCaller;
 
-    DM_OUT_P << "midi in - time: " << deltatime << "length: " << message->size();
+    if (message->at(0) != 248) // ignore clock
+    {
+#ifdef MDM_DEBUG_ENABLED
+        DM_OUT_P << "midi in - time: " << deltatime << "length: " << message->size();
+#endif
+    }
 
     QByteArray packetArray;
 
@@ -1004,6 +1009,10 @@ void MidiDeviceManager::midiInCallback( double deltatime, std::vector< unsigned 
             for (int i = 0; i < (int)message->size(); i++)
             {
                 packetArray.append( (uchar)message->at(i) );
+#ifdef MDM_DEBUG_ENABLED
+                if (message->at(0) != 248) // ignore clock
+                    DM_OUT_P << "Byte[" << i <<"]: " << message->at(i);
+#endif
             }
 
             //DM_OUT_P << "midi in - message size: " << message->size() << " byte0: " << (uchar)packetArray[0];
@@ -1011,12 +1020,19 @@ void MidiDeviceManager::midiInCallback( double deltatime, std::vector< unsigned 
             // standard messages
             if ((uchar)packetArray[0] != (uchar)MIDI_SX_START)
             {
-                DM_OUT_P << "MIDI Channel Event: ";
+                if (message->at(0) != 248) // ignore clock
+                {
+#ifdef MDM_DEBUG_ENABLED
+                    DM_OUT_P << "MIDI Channel Event: ";
+#endif
+                }
                 thisMidiDeviceManager->slotParsePacket(packetArray);
             }
             else // sysex
             {
+#ifdef MDM_DEBUG_ENABLED
                 DM_OUT_P << "SysEx received";
+ #endif
                 thisMidiDeviceManager->slotProcessSysEx(packetArray, message);
             }
         }
