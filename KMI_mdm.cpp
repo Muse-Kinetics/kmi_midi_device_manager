@@ -800,8 +800,17 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
 
     // prepare and send the packet
     //std::vector<unsigned char> message(packet, packet+len);
-    midi_out->sendMessage( &packet );
+    try
+    {
+        midi_out->sendMessage( &packet );
+    }
+    catch (RtMidiError &error)
+    {
+        DM_OUT << "MIDI SEND ERR:" << (QString::fromStdString(error.getMessage()));
+        emit signalFwConsoleMessage("MIDI SEND ERR:" + (QString::fromStdString(error.getMessage())));
+    }
 }
+
 
 void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
 {
