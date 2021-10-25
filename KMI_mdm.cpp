@@ -698,7 +698,9 @@ void MidiDeviceManager::slotEnterBootloader()
 void MidiDeviceManager::slotBeginBlTimer()
 {
     DM_OUT << "slotBeginBlTimer called";
-    //QTimer::singleShot(3000, this, SLOT(slotBootloaderTimeout()));
+#ifndef Q_OS_WIN
+    QTimer::singleShot(3000, this, SLOT(slotBootloaderTimeout()));
+#endif
 }
 
 void MidiDeviceManager::slotBootloaderTimeout()
@@ -716,9 +718,9 @@ void MidiDeviceManager::slotUpdateFirmware()
     if (port_out_open == false)
     {
 #ifndef Q_OS_WIN
-        emit signalFwConsoleMessage(QString("\%1 not connected!\n").arg(deviceName));
+        emit signalFwConsoleMessage(QString("\n%1 not connected!\n").arg(deviceName));
 #else
-        emit signalFwConsoleMessage(QString("\%1 MIDI driver not connected or unavailable.\n"
+        emit signalFwConsoleMessage(QString("\n%1 MIDI driver not connected or unavailable.\n"
                                "Windows cannot share standard USB MIDI drivers, try\n"
                                "closing all programs, re-starting the %1 editor,\n"
                                "and then reconnecting your %1.\n").arg(deviceName));
@@ -746,7 +748,9 @@ void MidiDeviceManager::slotUpdateFirmware()
 void MidiDeviceManager::slotBeginFwTimer()
 {
     DM_OUT << "slotBeginFwTimer called";
-    //QTimer::singleShot(15000, this, SLOT(slotFirmwareTimeout()));
+#ifndef Q_OS_WIN
+    QTimer::singleShot(15000, this, SLOT(slotFirmwareTimeout()));
+#endif
 }
 
 void MidiDeviceManager::slotFirmwareTimeout()
@@ -1064,6 +1068,8 @@ void MidiDeviceManager::slotErrorPopup(QString errorMessage)
 
 void MidiDeviceManager::midiInCallback( double deltatime, std::vector< unsigned char > *message, void *thisCaller )
 {
+    if (deltatime == 0 && 1 == 0) return; // suppress warning
+
     // create pointer for the mdm that called this
     MidiDeviceManager * thisMidiDeviceManager;
     thisMidiDeviceManager = (MidiDeviceManager*) thisCaller;
