@@ -98,6 +98,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 
 bool MidiDeviceManager::updatePortIn(int port)
 {
+    //qDebug() << "updatePortIn called";
     // update and try to re-open
     port_in = port;
     if (slotOpenMidiIn())
@@ -111,6 +112,7 @@ bool MidiDeviceManager::updatePortIn(int port)
 
 bool MidiDeviceManager::updatePortOut(int port)
 {
+    //qDebug() << "updatePortOut called";
     // update and try to re-open
     port_out = port;
     if (slotOpenMidiOut())
@@ -130,6 +132,7 @@ bool MidiDeviceManager::slotOpenMidiIn()
     {
         // first close the port to avoid errors
         if (!slotCloseMidiIn()) DM_OUT << "couldn't close in port: " << port_in;
+        // setup RtMidi connections
 
         //open ports
         midi_in->openPort(port_in);
@@ -195,6 +198,8 @@ bool MidiDeviceManager::slotCloseMidiIn()
             midi_in->cancelCallback();
             callbackIsSet = false;
         }
+        delete midi_in;
+        midi_in = new RtMidiIn(); // create new instance
     }
     catch (RtMidiError &error)
     {
@@ -219,6 +224,8 @@ bool MidiDeviceManager::slotCloseMidiOut()
     {
         //close ports
         midi_out->closePort();
+        delete midi_out;
+        midi_out = new RtMidiOut(); // refresh instance
     }
     catch (RtMidiError &error)
     {
@@ -236,6 +243,63 @@ bool MidiDeviceManager::slotCloseMidiOut()
     bootloaderMode = false;
     port_out_open = false;
     return 1;
+}
+
+// reset connections is needed when the bootloader and app port names don't match
+void MidiDeviceManager::slotResetConnections(QString portName)
+{
+    bool refreshDone = false;
+    QString thisPortName;
+
+    midi_in->cancelCallback();
+    slotStopPolling();
+
+    //qDebug() << "Closing ports..." << QString::fromStdString(midi_in->getPortName(port_in));
+    midi_in->closePort();
+    midi_out->closePort();
+
+    delete midi_out;
+    delete midi_in;
+    midi_in = new RtMidiIn(); // refresh instance
+    midi_out = new RtMidiOut(); // refresh instance
+
+    while (!refreshDone)
+    {
+        thisPortName = QString::fromStdString(midi_in->getPortName(port_in));
+        //qDebug() << "Opening ports..." << thisPortName;
+        midi_in->openPort(port_in);
+        midi_out->openPort(port_out);
+
+        if (!bootloaderMode) // attempting to enter bootloader...
+        {
+            if (thisPortName.contains("1"))
+            {
+                refreshDone = true; // ... don't exit until the port name = "QuNexus Port 1"
+            }
+        }
+        else // after bootloader updates firmware, the port should be "QuNexus Control Surface"
+        {
+            if (thisPortName == portName)
+            {
+                refreshDone = true;
+            }
+        }
+
+        if (!refreshDone)
+        {
+            //qDebug() << "Closing ports..." << thisPortName;
+            midi_in->closePort();
+            midi_out->closePort();
+        }
+
+        QThread::sleep(1);
+    }
+
+    midi_in->ignoreTypes( false, false, false );
+
+    midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
+
+    slotStartPolling(); // begin polling
 }
 
 // sends a sysex universal ack with magic number, if received then alert app
@@ -257,7 +321,7 @@ void MidiDeviceManager::slotSetExpectedFW(QByteArray fwVer)
 // timer to regularly ping the device for firmware info and to confirm connection
 void MidiDeviceManager::slotStartPolling()
 {
-    DM_OUT << "slotStartPolling called";
+    //DM_OUT << "slotStartPolling called";
     int pollTime;
 
     versionPoller = new QTimer(this);
@@ -283,9 +347,7 @@ void MidiDeviceManager::slotStopPolling() // this has to be called from an emitt
 
 void MidiDeviceManager::slotPollVersion()
 {
-    DM_OUT << "slotPollVersion called - in_open: " << port_in_open << " out_open: " << port_out_open;
-
-    //DM_OUT << "\nslotPollVersion called";
+    //DM_OUT << "slotPollVersion called - in_open: " << port_in_open << "in port#: " << port_in <<  " out_open: " << port_out_open << " port_out: " << port_out;
 
     // ports aren't setup yet
     if (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open)
@@ -305,6 +367,12 @@ void MidiDeviceManager::slotPollVersion()
         pollTimeout++;
 
     }
+    else
+    {
+        // ports are setup, make sure callback is correctly set
+//        midi_in->cancelCallback();
+//        midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
+    }
 
     if (deviceName == "SoftStep") // softStep doesn't use the universal syx dev id request
     {
@@ -315,7 +383,7 @@ void MidiDeviceManager::slotPollVersion()
         slotSendSysEx(_fw_req_12step, sizeof(_fw_req_12step));
     }
     else // every other product
-    {
+    {   
         slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
     }
 }
@@ -630,7 +698,7 @@ void MidiDeviceManager::slotEnterBootloader()
 void MidiDeviceManager::slotBeginBlTimer()
 {
     DM_OUT << "slotBeginBlTimer called";
-    QTimer::singleShot(3000, this, SLOT(slotBootloaderTimeout()));
+    //QTimer::singleShot(3000, this, SLOT(slotBootloaderTimeout()));
 }
 
 void MidiDeviceManager::slotBootloaderTimeout()
@@ -678,7 +746,7 @@ void MidiDeviceManager::slotUpdateFirmware()
 void MidiDeviceManager::slotBeginFwTimer()
 {
     DM_OUT << "slotBeginFwTimer called";
-    QTimer::singleShot(15000, this, SLOT(slotFirmwareTimeout()));
+    //QTimer::singleShot(15000, this, SLOT(slotFirmwareTimeout()));
 }
 
 void MidiDeviceManager::slotFirmwareTimeout()
@@ -795,7 +863,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     }
 
 #ifdef MDM_DEBUG_ENABLED
-    DM_OUT << "Send MIDI - packet: " << packet;
+    if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;
 #endif
 
     // prepare and send the packet

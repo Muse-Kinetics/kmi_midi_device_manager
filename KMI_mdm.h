@@ -165,6 +165,8 @@ public slots:
     bool slotCloseMidiIn();
     bool slotCloseMidiOut();
 
+    void slotResetConnections(QString portName);
+
     void slotTestFeedbackLoop();
 
     void slotSetExpectedFW(QByteArray fwVer);
