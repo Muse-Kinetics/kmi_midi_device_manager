@@ -83,10 +83,13 @@ public:
     bool globalsRequested; // flag if we are storing global data to restore after update
     bool bootloaderMode;
     bool fwUpdateRequested;
+    bool hackStopTimer;
 
     QTimer* versionPoller;
     QTimer* timeoutFwBl;
     QTimer* timeoutGlobalsReq;
+
+    QElapsedTimer versionReplyTimer;
 
     // counters to timeout timers
     unsigned char pollTimeout;
@@ -107,6 +110,8 @@ public:
 // public functions
     bool updatePortIn(int port);
     bool updatePortOut(int port);
+
+    QByteArray decode8BitArray(QByteArray this8BitArray);
 
 signals:
     // detect MIDI feedback loop

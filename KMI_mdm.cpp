@@ -85,6 +85,8 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     // firmware and bootloader timeout timer
     //timeoutFwBl = new QTimer(this);
 
+    versionReplyTimer.start();
+
     // timers have to be triggered by these signals from the main thread
     connect(this, SIGNAL(signalStopPolling()), this, SLOT(slotStopPolling()));
     connect(this, SIGNAL(signalBeginBlTimer()), this, SLOT(slotBeginBlTimer()));
@@ -98,7 +100,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 
 bool MidiDeviceManager::updatePortIn(int port)
 {
-    //qDebug() << "updatePortIn called";
+    DM_OUT << "updatePortIn called";
     // update and try to re-open
     port_in = port;
     if (slotOpenMidiIn())
@@ -112,7 +114,7 @@ bool MidiDeviceManager::updatePortIn(int port)
 
 bool MidiDeviceManager::updatePortOut(int port)
 {
-    //qDebug() << "updatePortOut called";
+    DM_OUT << "updatePortOut called";
     // update and try to re-open
     port_out = port;
     if (slotOpenMidiOut())
@@ -123,6 +125,49 @@ bool MidiDeviceManager::updatePortOut(int port)
     port_out_open = false;
     return 0;
 }
+
+QByteArray MidiDeviceManager::decode8BitArray(QByteArray this8BitArray)
+{
+    int         numPackets = ceil(double(this8BitArray.size() / 8));
+    int         counter = 0;
+    uchar       buffer[8];
+    QByteArray  decodedArray;
+
+    for(int thisPacket = 0; thisPacket <= numPackets; thisPacket++)
+    {
+        // fill buffer with 8 bytes from array
+        for(uchar thisByte = 0; thisByte < 8; thisByte++)
+        {
+            int thisIndex = (thisByte + (thisPacket * 8));
+            buffer[thisByte] = this8BitArray.at(thisIndex);
+        }
+
+        //Decode packet
+        for(uchar thisByte = 0; thisByte < 7; thisByte++)
+        {
+            //If decode byte bit 0 is high
+            if(buffer[7] & 0x01)
+            {
+                buffer[thisByte] |= 0x80; // set bit 7 high
+            }
+
+            buffer[7] >>=1; // shift decode buffer right by 1
+
+            // stay in bounds
+            if (counter < this8BitArray.size())
+            {
+                // byte is decoded, stuff it into the array
+                decodedArray.append(buffer[thisByte]);
+            }
+            counter++;
+        }
+    }
+    return decodedArray;
+}
+
+// ----------------------------------------------------------
+// slots
+// ----------------------------------------------------------
 
 bool MidiDeviceManager::slotOpenMidiIn()
 {
@@ -248,13 +293,16 @@ bool MidiDeviceManager::slotCloseMidiOut()
 // reset connections is needed when the bootloader and app port names don't match
 void MidiDeviceManager::slotResetConnections(QString portName)
 {
+    DM_OUT << "slotResetConnections called";
     bool refreshDone = false;
     QString thisPortName;
 
-    midi_in->cancelCallback();
-    slotStopPolling();
+    unsigned char numInPorts, numOutPorts;
 
-    //qDebug() << "Closing ports..." << QString::fromStdString(midi_in->getPortName(port_in));
+    midi_in->cancelCallback();
+    emit signalStopPolling();
+
+    DM_OUT << "Closing ports..." << QString::fromStdString(midi_in->getPortName(port_in));
     midi_in->closePort();
     midi_out->closePort();
 
@@ -264,11 +312,47 @@ void MidiDeviceManager::slotResetConnections(QString portName)
     midi_out = new RtMidiOut(); // refresh instance
 
     while (!refreshDone)
-    {
-        thisPortName = QString::fromStdString(midi_in->getPortName(port_in));
-        //qDebug() << "Opening ports..." << thisPortName;
-        midi_in->openPort(port_in);
-        midi_out->openPort(port_out);
+    {  
+        // this is a hack for now, KMI_Ports should be reporting these changes, investigate this further
+        numInPorts = midi_in->getPortCount();
+        numOutPorts = midi_out->getPortCount();
+
+        // test/fix input port name
+        for (uint thisPort = 0; thisPort < (numInPorts); thisPort++)
+        {
+            QString newPortName = QString::fromStdString(midi_in->getPortName(thisPort));
+
+            if (newPortName == portName || (newPortName.contains(deviceName) && newPortName.contains("1")))
+            {
+                port_in = thisPort;
+            }
+        }
+
+        // test/fix output port name
+        for (uint thisPort = 0; thisPort < (numOutPorts); thisPort++)
+        {
+            QString newPortName = QString::fromStdString(midi_out->getPortName(thisPort));
+
+            if (newPortName == portName || (newPortName.contains(deviceName) && newPortName.contains("1")))
+            {
+                port_out = thisPort;
+            }
+        }
+
+
+        try
+        {
+            thisPortName = QString::fromStdString(midi_in->getPortName(port_in));
+            DM_OUT << "Opening ports..." << thisPortName;
+
+            midi_in->openPort(port_in);
+            midi_out->openPort(port_out);
+        }
+        catch (RtMidiError &error)
+        {
+            /* Return the error */
+            DM_OUT << "Port #" << port_in << " not found, retrying";
+        }
 
         if (!bootloaderMode) // attempting to enter bootloader...
         {
@@ -287,7 +371,7 @@ void MidiDeviceManager::slotResetConnections(QString portName)
 
         if (!refreshDone)
         {
-            //qDebug() << "Closing ports..." << thisPortName;
+            DM_OUT << "Closing ports..." << thisPortName;
             midi_in->closePort();
             midi_out->closePort();
         }
@@ -295,11 +379,12 @@ void MidiDeviceManager::slotResetConnections(QString portName)
         QThread::sleep(1);
     }
 
+    DM_OUT << "slotResetConnections set callback";
     midi_in->ignoreTypes( false, false, false );
 
     midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
 
-    slotStartPolling(); // begin polling
+    //slotStartPolling(); // begin polling
 }
 
 // sends a sysex universal ack with magic number, if received then alert app
@@ -321,7 +406,7 @@ void MidiDeviceManager::slotSetExpectedFW(QByteArray fwVer)
 // timer to regularly ping the device for firmware info and to confirm connection
 void MidiDeviceManager::slotStartPolling()
 {
-    //DM_OUT << "slotStartPolling called";
+    DM_OUT << "slotStartPolling called";
     int pollTime;
 
     versionPoller = new QTimer(this);
@@ -361,7 +446,7 @@ void MidiDeviceManager::slotPollVersion()
             slotFirmwareUpdateReset();
             connected = false;
             emit signalFirmwareUpdateComplete(false);
-            slotStopPolling();
+            emit signalStopPolling();
             return;
         }
         pollTimeout++;
@@ -372,6 +457,13 @@ void MidiDeviceManager::slotPollVersion()
         // ports are setup, make sure callback is correctly set
 //        midi_in->cancelCallback();
 //        midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
+    }
+
+    if (hackStopTimer)
+    {
+        emit signalStopPolling();
+        hackStopTimer = false;
+        return;
     }
 
     if (deviceName == "SoftStep") // softStep doesn't use the universal syx dev id request
@@ -564,7 +656,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         DM_OUT << "Unrecognized Syx: " << QString::fromStdString(sysExMessageByteArray.toStdString());;
 #endif
 
-        DM_OUT << "passing SysEx to applicaiton";
+        //DM_OUT << "passing SysEx to applicaiton";
         // send SysEx to application
         emit signalRxSysExBA(sysExMessageByteArray);
         emit signalRxSysEx(sysExMessageCharArray);
@@ -572,6 +664,12 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         // leave function
         return;
     }
+
+
+    // only allow 1 version response every second
+    if (!versionReplyTimer.hasExpired(1000)) return;
+
+    versionReplyTimer.restart();
 
     // process firmware version connection messages
     emit signalStopPolling();
@@ -595,6 +693,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
         if (fwUpdateRequested) // wait for user to see update completed and click ok
         {
+            emit signalStopPolling();
+            hackStopTimer = true;
             if (globalsRequested)
             {
                 globalsRequested = false;
