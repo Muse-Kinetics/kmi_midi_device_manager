@@ -88,7 +88,8 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     versionReplyTimer.start();
 
     // timers have to be triggered by these signals from the main thread
-    connect(this, SIGNAL(signalStopPolling()), this, SLOT(slotStopPolling()));
+    connect(this, SIGNAL(signalStartPolling(QString)), this, SLOT(slotStartPolling(QString)));
+    connect(this, SIGNAL(signalStopPolling(QString)), this, SLOT(slotStopPolling(QString)));
     connect(this, SIGNAL(signalBeginBlTimer()), this, SLOT(slotBeginBlTimer()));
     connect(this, SIGNAL(signalBeginFwTimer()), this, SLOT(slotBeginFwTimer()));
     connect(this, SIGNAL(signalStopGlobalTimer()), this, SLOT(slotStopGlobalTimer()));
@@ -291,18 +292,23 @@ bool MidiDeviceManager::slotCloseMidiOut()
 }
 
 // reset connections is needed when the bootloader and app port names don't match
-void MidiDeviceManager::slotResetConnections(QString portName)
+void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNameBootloader)
 {
-    DM_OUT << "slotResetConnections called";
+    DM_OUT << "slotResetConnections called - portName: " << portNameApp;
     bool refreshDone = false;
+    bool portNameMatch = false;
+    bool initialBootloaderMode = bootloaderMode;
+
     QString thisPortName;
+
+    QString lastPortName = QString::fromStdString(midi_in->getPortName(port_in));
 
     unsigned char numInPorts, numOutPorts;
 
     midi_in->cancelCallback();
-    emit signalStopPolling();
+    emit signalStopPolling("slotResetConnections");
 
-    DM_OUT << "Closing ports..." << QString::fromStdString(midi_in->getPortName(port_in));
+    DM_OUT << "Closing ports..." << lastPortName;
     midi_in->closePort();
     midi_out->closePort();
 
@@ -311,35 +317,56 @@ void MidiDeviceManager::slotResetConnections(QString portName)
     midi_in = new RtMidiIn(); // refresh instance
     midi_out = new RtMidiOut(); // refresh instance
 
-    while (!refreshDone)
+    while (!refreshDone) // loop until the port changes
     {  
         // this is a hack for now, KMI_Ports should be reporting these changes, investigate this further
+        DM_OUT << "slotResetConnections - getPortCount";
         numInPorts = midi_in->getPortCount();
         numOutPorts = midi_out->getPortCount();
 
         // test/fix input port name
         for (uint thisPort = 0; thisPort < (numInPorts); thisPort++)
         {
-            QString newPortName = QString::fromStdString(midi_in->getPortName(thisPort));
-
-            if (newPortName == portName || (newPortName.contains(deviceName) && newPortName.contains("1")))
+            if (thisPort <= numInPorts)
             {
-                port_in = thisPort;
+                DM_OUT << "find in port - thisPort: " << thisPort;
+                QString newPortName = QString::fromStdString(midi_in->getPortName(thisPort));
+
+                // confirm we are either going bootLoader->app or app->bootLoader
+                if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
+                {
+                    port_in = thisPort;
+                    portNameMatch = true;
+                }
+            }
+            else
+            {
+                DM_OUT << "Port subtraction before end of for loop, numInPorts: " << numInPorts << " thisPort: " << thisPort;
             }
         }
 
         // test/fix output port name
         for (uint thisPort = 0; thisPort < (numOutPorts); thisPort++)
         {
-            QString newPortName = QString::fromStdString(midi_out->getPortName(thisPort));
-
-            if (newPortName == portName || (newPortName.contains(deviceName) && newPortName.contains("1")))
+            if (thisPort <= numOutPorts)
             {
-                port_out = thisPort;
+                DM_OUT << "find out port - thisPort: " << thisPort;
+                QString newPortName = QString::fromStdString(midi_out->getPortName(thisPort));
+
+                // confirm we are either going bootLoader->app or app->bootLoader
+                if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
+                {
+                    port_out = thisPort;
+                    portNameMatch = true;
+                }
+            }
+            else
+            {
+                DM_OUT << "Port subtraction before end of for loop, numOutPorts: " << numOutPorts << " thisPort: " << thisPort;
             }
         }
 
-
+        // attempting to open the ports when we are in between app and bootloader modes helps to flush out the old port settings
         try
         {
             thisPortName = QString::fromStdString(midi_in->getPortName(port_in));
@@ -351,29 +378,36 @@ void MidiDeviceManager::slotResetConnections(QString portName)
         catch (RtMidiError &error)
         {
             /* Return the error */
+            thisPortName = ""; // prevents refreshDone being set to true in next if statement
             DM_OUT << "Port #" << port_in << " not found, retrying";
         }
 
-        if (!bootloaderMode) // attempting to enter bootloader...
+        // *****************************************
+        // validate if the ports have been refreshed
+        // *****************************************
+        if (!initialBootloaderMode && thisPortName == portNameBootloader) // test for app->bootloader
         {
-            if (thisPortName.contains("1"))
-            {
-                refreshDone = true; // ... don't exit until the port name = "QuNexus Port 1"
-            }
+            DM_OUT << "app -> bootloader, thisPortName: " << thisPortName << " portNameBootloader: " << portNameBootloader;
+            refreshDone = true;
         }
-        else // after bootloader updates firmware, the port should be "QuNexus Control Surface"
-        {
-            if (thisPortName == portName)
-            {
-                refreshDone = true;
-            }
+        else if (initialBootloaderMode && thisPortName == portNameApp) // test if bootloader->app
+        {   
+            DM_OUT << "bootloader -> app, ports match - thisPortName: " << thisPortName << " portNameApp: " << portNameApp;
+            refreshDone = true;
         }
-
-        if (!refreshDone)
+        else // we are about to loop back - close the ports, which is necessary to flush out the old settings
         {
-            DM_OUT << "Closing ports..." << thisPortName;
-            midi_in->closePort();
-            midi_out->closePort();
+            try
+            {
+                DM_OUT << "Closing ports..." << thisPortName;
+                midi_in->closePort();
+                midi_out->closePort();
+            }
+            catch (RtMidiError &error)
+            {
+                /* Return the error */
+                DM_OUT << "Port still not found, retrying";
+            }
         }
 
         QThread::sleep(1);
@@ -382,9 +416,11 @@ void MidiDeviceManager::slotResetConnections(QString portName)
     DM_OUT << "slotResetConnections set callback";
     midi_in->ignoreTypes( false, false, false );
 
+    midi_in->cancelCallback();
+    QThread::sleep(1);
     midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
 
-    //slotStartPolling(); // begin polling
+    if (initialBootloaderMode) slotStartPolling("slotResetConnections - bootloader->app successful"); // bootloader->app, begin polling
 }
 
 // sends a sysex universal ack with magic number, if received then alert app
@@ -404,9 +440,12 @@ void MidiDeviceManager::slotSetExpectedFW(QByteArray fwVer)
 }
 
 // timer to regularly ping the device for firmware info and to confirm connection
-void MidiDeviceManager::slotStartPolling()
+void MidiDeviceManager::slotStartPolling(QString caller)
 {
-    DM_OUT << "slotStartPolling called";
+    DM_OUT << "slotStartPolling called - caller:" << caller << " pollingStatus:" << pollingStatus;
+
+    if (pollingStatus == true) return; // avoid starting the timer multiple times
+
     int pollTime;
 
     versionPoller = new QTimer(this);
@@ -425,14 +464,17 @@ void MidiDeviceManager::slotStartPolling()
     versionPoller->start(pollTime);
 }
 
-void MidiDeviceManager::slotStopPolling() // this has to be called from an emitted signal so that it's handled in the main thread
+void MidiDeviceManager::slotStopPolling(QString caller) // this has to be called from an emitted signal so that it's handled in the main thread
 {
+    DM_OUT << "slotStopPolling called - caller:" << caller;
     versionPoller->stop();
+    pollingStatus = false;
 }
 
 void MidiDeviceManager::slotPollVersion()
 {
-    //DM_OUT << "slotPollVersion called - in_open: " << port_in_open << "in port#: " << port_in <<  " out_open: " << port_out_open << " port_out: " << port_out;
+    DM_OUT << "slotPollVersion called - in_open: " << port_in_open << "in port#: " << port_in <<  " out_open: " << port_out_open << " port_out: " << port_out;
+    pollingStatus = true;
 
     // ports aren't setup yet
     if (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open)
@@ -446,7 +488,7 @@ void MidiDeviceManager::slotPollVersion()
             slotFirmwareUpdateReset();
             connected = false;
             emit signalFirmwareUpdateComplete(false);
-            emit signalStopPolling();
+            emit signalStopPolling("slotPollVersion");
             return;
         }
         pollTimeout++;
@@ -455,13 +497,21 @@ void MidiDeviceManager::slotPollVersion()
     else
     {
         // ports are setup, make sure callback is correctly set
-//        midi_in->cancelCallback();
-//        midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
+        midi_in->cancelCallback();
+
+//        slotCloseMidiIn();
+//        slotCloseMidiOut();
+//        slotOpenMidiIn();
+//        slotOpenMidiOut();
+//        updatePortIn(port_in);
+//        updatePortOut(port_out);
+
+        midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
     }
 
     if (hackStopTimer)
     {
-        emit signalStopPolling();
+        emit signalStopPolling("slotPollVersion - hackStopTimer");
         hackStopTimer = false;
         return;
     }
@@ -672,7 +722,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     versionReplyTimer.restart();
 
     // process firmware version connection messages
-    emit signalStopPolling();
+    emit signalStopPolling("slotProcessSysEx");
 
     if (bootloaderMode)
     {
@@ -693,7 +743,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
         if (fwUpdateRequested) // wait for user to see update completed and click ok
         {
-            emit signalStopPolling();
+            emit signalStopPolling("slotProcessSysEx - fw match");
             hackStopTimer = true;
             if (globalsRequested)
             {
@@ -723,6 +773,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
 void MidiDeviceManager::slotOpenFirmwareFile(QString filePath)
 {
+    DM_OUT << "slotOpenFirmwareFile called, file: " << filePath;
     //Load Firmware File into a byte array
     firmware = new QFile(filePath);
     firmware->open(QIODevice::ReadOnly);
@@ -749,7 +800,7 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
             {
                 DM_OUT << "Globals received, stop timer and enter bootloader";
                 emit signalStopGlobalTimer();
-                emit signalStopPolling();
+                emit signalStopPolling("slotRequestFirmwareUpdate - globals received, enter bootloader");
 
                 emit signalFwConsoleMessage("\nGlobals Saved.");
                 emit signalFwProgress(25); // increment progress bar
@@ -798,8 +849,19 @@ void MidiDeviceManager::slotEnterBootloader()
 void MidiDeviceManager::slotBeginBlTimer()
 {
     DM_OUT << "slotBeginBlTimer called";
+    int timeoutTime;
+
+    switch (PID)
+    {
+    case PID_QUNEO: // need extra time for QuNeo
+        timeoutTime = 5000;
+        break;
+    default:
+        timeoutTime = 3000;
+    }
+
 #ifndef Q_OS_WIN
-    QTimer::singleShot(3000, this, SLOT(slotBootloaderTimeout()));
+    QTimer::singleShot(timeoutTime, this, SLOT(slotBootloaderTimeout()));
 #endif
 }
 
@@ -809,7 +871,7 @@ void MidiDeviceManager::slotBootloaderTimeout()
     DM_OUT << "slotBootloaderTimeout called - bootloaderMode: " << bootloaderMode;
     if (bootloaderMode) return;
     emit signalFwConsoleMessage(QString("\nPinging %1 for bootloader status...\n").arg(deviceName));
-    slotStartPolling(); // begin polling
+    emit signalStartPolling("slotBootloaderTimeout"); // begin polling
 }
 
 void MidiDeviceManager::slotUpdateFirmware()
@@ -861,7 +923,7 @@ void MidiDeviceManager::slotFirmwareTimeout()
 
     emit signalFwProgress(75); // increment progress bar
     emit signalFwConsoleMessage("\nPinging Device for version info...\n");
-    slotStartPolling(); // begin polling
+    emit signalStartPolling("slotFirmwareTimeout"); // begin polling
 }
 
 void MidiDeviceManager::slotFirmwareUpdateReset()
@@ -870,6 +932,8 @@ void MidiDeviceManager::slotFirmwareUpdateReset()
     fwUpdateRequested = false;
     bootloaderMode = false;
     globalsRequested = false;
+    hackStopTimer = false;
+    emit signalStopPolling("slotFirmwareUpdateReset");
 }
 
 

@@ -45,7 +45,7 @@ unsigned char _bl_ver_quneo[] =
 // However the MSB breaks out into 1.x. So 0x17 0x12 = 1.2.30
 unsigned char _fw_ver_quneo[] =
 {
-    1, 2, 30
+    1, 2, 31
 };
 
 unsigned char _fw_ver_12step[] =

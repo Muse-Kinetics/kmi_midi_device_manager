@@ -84,6 +84,7 @@ public:
     bool bootloaderMode;
     bool fwUpdateRequested;
     bool hackStopTimer;
+    bool pollingStatus;
 
     QTimer* versionPoller;
     QTimer* timeoutFwBl;
@@ -120,7 +121,8 @@ signals:
     // detect firmware version
     void signalFirmwareDetected(MidiDeviceManager*, bool);
     void signalFirmwareMismatch(QString, QString, QString);
-    void signalStopPolling();
+    void signalStartPolling(QString);
+    void signalStopPolling(QString);
     void signalStopGlobalTimer();
     void signalBootloaderMode(bool);
     void signalConnected(bool);
@@ -170,14 +172,14 @@ public slots:
     bool slotCloseMidiIn();
     bool slotCloseMidiOut();
 
-    void slotResetConnections(QString portName);
+    void slotResetConnections(QString portNameApp, QString portNameBootloader);
 
     void slotTestFeedbackLoop();
 
     void slotSetExpectedFW(QByteArray fwVer);
     void slotPollVersion();
-    void slotStartPolling();
-    void slotStopPolling();
+    void slotStartPolling(QString Caller);
+    void slotStopPolling(QString caller);
     void slotStartGlobalsTimer();
     void slotStopGlobalTimer();
     void slotCheckGlobalsReceived();

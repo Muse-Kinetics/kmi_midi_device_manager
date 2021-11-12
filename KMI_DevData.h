@@ -47,6 +47,7 @@
 
 // QUNEXUS OLD
 
+    #define QUNEXUS_BL_PORT  "QuNexus Port 1"
 #ifdef Q_OS_MAC
     #define QUNEXUS_OLD_IN_P1 "QuNexus Port 1"
     #define QUNEXUS_OLD_IN_P2 "QuNexus Port 2"
@@ -103,12 +104,13 @@
 
 // QuNeo
 
+    #define QUNEO_BL_PORT "QUNEO"
 #ifdef Q_OS_MAC
-    #define QUNEO_IN_P1 "QUNEO"
-    #define QUNEO_OUT_P1 "QUNEO"
+    #define QUNEO_IN_P1 "QuNeo"
+    #define QUNEO_OUT_P1 "QuNeo"
 #else
-    #define QUNEO_IN_P1 "QUNEO"
-    #define QUNEO_OUT_P1 "QUNEO"
+    #define QUNEO_IN_P1 "QuNeo"
+    #define QUNEO_OUT_P1 "QuNeo"
 #endif
 
 // 12 Step old
