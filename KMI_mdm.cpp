@@ -85,6 +85,10 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     // firmware and bootloader timeout timer
     //timeoutFwBl = new QTimer(this);
 
+    versionPoller = new QTimer(this);
+
+    versionPoller->start(1000); // start the timer
+
     versionReplyTimer.start();
 
     // timers have to be triggered by these signals from the main thread
@@ -444,11 +448,9 @@ void MidiDeviceManager::slotStartPolling(QString caller)
 {
     DM_OUT << "slotStartPolling called - caller:" << caller << " pollingStatus:" << pollingStatus;
 
-    if (pollingStatus == true) return; // avoid starting the timer multiple times
-
     int pollTime;
 
-    versionPoller = new QTimer(this);
+    //versionPoller = new QTimer(this);
     connect(versionPoller, SIGNAL(timeout()), this, SLOT(slotPollVersion()));
 
     // some devices take longer to boot up
@@ -461,20 +463,27 @@ void MidiDeviceManager::slotStartPolling(QString caller)
     {
         pollTime = 500;
     }
-    versionPoller->start(pollTime);
+    //versionPoller->start(pollTime);
+    versionPoller->setInterval(pollTime);
+
+    pollingStatus = true; // allow polling to proceed
 }
 
 void MidiDeviceManager::slotStopPolling(QString caller) // this has to be called from an emitted signal so that it's handled in the main thread
 {
     DM_OUT << "slotStopPolling called - caller:" << caller;
-    versionPoller->stop();
-    pollingStatus = false;
+    //versionPoller->stop();
+    disconnect(this, SLOT(slotPollVersion())); // disconnect all slots/signals for the timer
+
+    pollingStatus = false; // block polling
 }
 
 void MidiDeviceManager::slotPollVersion()
 {
+
+    if (pollingStatus == false) return; // avoid starting the timer multiple times
+
     DM_OUT << "slotPollVersion called - in_open: " << port_in_open << "in port#: " << port_in <<  " out_open: " << port_out_open << " port_out: " << port_out;
-    pollingStatus = true;
 
     // ports aren't setup yet
     if (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open)
