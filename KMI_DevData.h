@@ -157,6 +157,7 @@
 
 // SOFTSTEP CURRENT
 
+    #define SS_BL_PORT "SoftStep Bootloader"
 #ifdef Q_OS_MAC
     #define SS_IN_P1 "SoftStep Control Surface"
     #define SS_IN_P2 "SoftStep Expander"

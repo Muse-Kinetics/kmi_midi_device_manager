@@ -30,6 +30,8 @@
 #include "KMI_SysexMessages.h"
 #include <QMessageBox>
 
+#define MDM_DEBUG_ENABLED 1
+
 // debugging macro
 #define DM_OUT qDebug() << objectName << ": "
 #define DM_OUT_P qDebug() << thisMidiDeviceManager->objectName << ": "
@@ -176,7 +178,7 @@ QByteArray MidiDeviceManager::decode8BitArray(QByteArray this8BitArray)
 
 bool MidiDeviceManager::slotOpenMidiIn()
 {
-    //DM_OUT << "slotOpenMidiIn called - port: " << port_in;
+    DM_OUT << "slotOpenMidiIn called - port: " << port_in;
 
     try
     {
@@ -211,7 +213,7 @@ bool MidiDeviceManager::slotOpenMidiIn()
 
 bool MidiDeviceManager::slotOpenMidiOut()
 {
-    //DM_OUT << "slotOpenMidiOut called - port: " << port_out;
+    DM_OUT << "slotOpenMidiOut called - port: " << port_out;
 
     try
     {
@@ -480,10 +482,11 @@ void MidiDeviceManager::slotStopPolling(QString caller) // this has to be called
 
 void MidiDeviceManager::slotPollVersion()
 {
+    //DM_OUT << "slotPollVersion called - pollingStatus: " << pollingStatus << " in_open: " << port_in_open << "in port#: " << port_in <<  " out_open: " << port_out_open << " port_out: " << port_out;
 
     if (pollingStatus == false) return; // avoid starting the timer multiple times
 
-    DM_OUT << "slotPollVersion called - in_open: " << port_in_open << "in port#: " << port_in <<  " out_open: " << port_out_open << " port_out: " << port_out;
+
 
     // ports aren't setup yet
     if (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open)
@@ -631,7 +634,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         slotErrorPopup("MIDI FEEDBACK LOOP DETECTED\nPorts Closed");
     }
 
-    // Query for SoftStep
+    // Query for "pre-bootloader" SoftStep replies
     QByteArray fwQueryReplySS(reinterpret_cast<char*>(_fw_reply_softstep), sizeof(_fw_reply_softstep));
     int replyIndexSS = sysExMessageByteArray.indexOf(fwQueryReplySS, 0);
 
@@ -646,9 +649,23 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // ***** Soft Step **************************************
     if (replyIndexSS == 2)
     {
+        // this is the old softstep reply
         DM_OUT << "SoftStep fw reply:" <<  sysExMessageByteArray;
-        deviceFirmwareVersion = sysExMessageByteArray.mid(68, 1);
-        DM_OUT << "SoftStep fw ver: " << (uchar)sysExMessageCharArray->at(68);
+
+        int fwVerWhole = (uchar)sysExMessageByteArray.at(68);
+
+        deviceFirmwareVersion.resize(3);
+        // no bootloader
+        deviceFirmwareVersion[2] = fwVerWhole % 10; // last digit
+        deviceFirmwareVersion[1] = (fwVerWhole - (uchar)deviceFirmwareVersion[2]) / 10; // second digit
+        deviceFirmwareVersion[0] = 0;
+
+        devicebootloaderVersion.resize(3);
+        devicebootloaderVersion[2] = 0;
+        devicebootloaderVersion[1] = 0;
+        devicebootloaderVersion[0] = 0;
+
+        DM_OUT << QString("SoftStep fw ver: %1.%2.%3").arg((uchar)deviceFirmwareVersion[0]).arg((uchar)deviceFirmwareVersion[1]).arg((uchar)deviceFirmwareVersion[2]);
     }
 
     // ***** 12 Step ****************************************
@@ -773,7 +790,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     }
     else
     {
-        DM_OUT << "emit fw mismatch - fwv: " << deviceFirmwareVersion << "cfwv: " << applicationFirmwareVersion;
+        DM_OUT << "emit fw mismatch - fwv: " << deviceFirmwareVersion.toUInt() << "cfwv: " << applicationFirmwareVersion.toUInt();
         emit signalFirmwareDetected(this, false);
         //emit signalFirmwareMismatch(QString(devicebootloaderVersion), QString(applicationFirmwareVersion), QString(deviceFirmwareVersion));
     }
