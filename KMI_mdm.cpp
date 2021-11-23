@@ -133,18 +133,27 @@ bool MidiDeviceManager::updatePortOut(int port)
 
 QByteArray MidiDeviceManager::decode8BitArray(QByteArray this8BitArray)
 {
+    DM_OUT << "decode8BitArray called";
     int         numPackets = ceil(double(this8BitArray.size() / 8));
     int         counter = 0;
     uchar       buffer[8];
     QByteArray  decodedArray;
 
-    for(int thisPacket = 0; thisPacket <= numPackets; thisPacket++)
+    for(int thisPacket = 0; thisPacket < numPackets; thisPacket++)
     {
         // fill buffer with 8 bytes from array
         for(uchar thisByte = 0; thisByte < 8; thisByte++)
         {
             int thisIndex = (thisByte + (thisPacket * 8));
-            buffer[thisByte] = this8BitArray.at(thisIndex);
+            if (thisIndex < this8BitArray.size())
+            {
+                buffer[thisByte] = this8BitArray.at(thisIndex);
+            }
+            else
+            {
+                buffer[thisByte] = 0; //
+                DM_OUT << "7bit to 8bit array conversion - last packet is truncated - Packet: " << thisPacket << "Byte: " << thisByte << " index: " << thisIndex;
+            }
         }
 
         //Decode packet
@@ -163,10 +172,12 @@ QByteArray MidiDeviceManager::decode8BitArray(QByteArray this8BitArray)
             {
                 // byte is decoded, stuff it into the array
                 decodedArray.append(buffer[thisByte]);
+                //DM_OUT << "8bit - packet: " << thisPacket << "Byte: " << thisByte << " data: " << buffer[thisByte];
             }
             counter++;
         }
     }
+    //DM_OUT << "Returning...";
     return decodedArray;
 }
 
@@ -383,7 +394,8 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         {
             /* Return the error */
             thisPortName = ""; // prevents refreshDone being set to true in next if statement
-            DM_OUT << "Port #" << port_in << " not found, retrying";
+            DM_OUT << "Port #" << port_in << " not found, retrying. Error Message: " << QString::fromStdString(error.getMessage());
+
         }
 
         // *****************************************
@@ -410,7 +422,7 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
             catch (RtMidiError &error)
             {
                 /* Return the error */
-                DM_OUT << "Port still not found, retrying";
+                DM_OUT << "Port still not found, retrying. Error Message: " << QString::fromStdString(error.getMessage());
             }
         }
 
