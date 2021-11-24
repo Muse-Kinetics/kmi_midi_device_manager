@@ -316,8 +316,11 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 
     QString thisPortName;
 
+#ifdef Q_OS_WIN
     QString lastPortName = portNameFix(QString::fromStdString(midi_in->getPortName(port_in)));
-
+#else
+    QString lastPortName = QString::fromStdString(midi_in->getPortName(port_in));
+#endif
     unsigned char numInPorts, numOutPorts;
 
     midi_in->cancelCallback();
@@ -349,7 +352,11 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         {
             if (thisPort <= numInPorts)
             {  
+#ifdef Q_OS_WIN
                 QString newPortName = portNameFix(QString::fromStdString(midi_in->getPortName(thisPort)));
+#else
+                QString newPortName = QString::fromStdString(midi_in->getPortName(thisPort));
+#endif
                 DM_OUT << "find in port - thisPort: " << thisPort << " newPortName: " << newPortName;
 
                 // confirm we are either going bootLoader->app or app->bootLoader
@@ -369,7 +376,11 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         {
             if (thisPort <= numOutPorts)
             {
+#ifdef Q_OS_WIN
                 QString newPortName = portNameFix(QString::fromStdString(midi_out->getPortName(thisPort)));
+#else
+                QString newPortName = QString::fromStdString(midi_out->getPortName(thisPort));
+#endif
                 DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
 
                 // confirm we are either going bootLoader->app or app->bootLoader
@@ -387,7 +398,11 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         // attempting to open the ports when we are in between app and bootloader modes helps to flush out the old port settings
         try
         {
+#ifdef Q_OS_WIN
             thisPortName = portNameFix(QString::fromStdString(midi_in->getPortName(port_in)));
+#else
+            thisPortName = QString::fromStdString(midi_in->getPortName(port_in));
+#endif
             DM_OUT << "Opening ports..." << thisPortName;
 
             midi_in->openPort(port_in);
