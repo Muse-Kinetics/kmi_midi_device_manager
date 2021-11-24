@@ -28,6 +28,7 @@
 #include "KMI_mdm.h"
 #include "KMI_DevData.h"
 #include "KMI_SysexMessages.h"
+#include "kmi_ports.h"
 #include <QMessageBox>
 
 // debugging macro
@@ -311,12 +312,11 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 {
     DM_OUT << "slotResetConnections called - portName: " << portNameApp;
     bool refreshDone = false;
-    bool portNameMatch = false;
     bool initialBootloaderMode = bootloaderMode;
 
     QString thisPortName;
 
-    QString lastPortName = QString::fromStdString(midi_in->getPortName(port_in));
+    QString lastPortName = portNameFix(QString::fromStdString(midi_in->getPortName(port_in)));
 
     unsigned char numInPorts, numOutPorts;
 
@@ -324,11 +324,16 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
     emit signalStopPolling("slotResetConnections");
 
     DM_OUT << "Closing ports..." << lastPortName;
+
+    //close ports
     midi_in->closePort();
     midi_out->closePort();
 
+    DM_OUT << "deleting ports...";
     delete midi_out;
     delete midi_in;
+
+    DM_OUT << "new rtmidi instances...";
     midi_in = new RtMidiIn(); // refresh instance
     midi_out = new RtMidiOut(); // refresh instance
 
@@ -343,15 +348,14 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         for (uint thisPort = 0; thisPort < (numInPorts); thisPort++)
         {
             if (thisPort <= numInPorts)
-            {
-                DM_OUT << "find in port - thisPort: " << thisPort;
-                QString newPortName = QString::fromStdString(midi_in->getPortName(thisPort));
+            {  
+                QString newPortName = portNameFix(QString::fromStdString(midi_in->getPortName(thisPort)));
+                DM_OUT << "find in port - thisPort: " << thisPort << " newPortName: " << newPortName;
 
                 // confirm we are either going bootLoader->app or app->bootLoader
                 if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
                 {
                     port_in = thisPort;
-                    portNameMatch = true;
                 }
             }
             else
@@ -365,14 +369,13 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         {
             if (thisPort <= numOutPorts)
             {
-                DM_OUT << "find out port - thisPort: " << thisPort;
-                QString newPortName = QString::fromStdString(midi_out->getPortName(thisPort));
+                QString newPortName = portNameFix(QString::fromStdString(midi_out->getPortName(thisPort)));
+                DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
 
                 // confirm we are either going bootLoader->app or app->bootLoader
                 if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
                 {
                     port_out = thisPort;
-                    portNameMatch = true;
                 }
             }
             else
@@ -384,7 +387,7 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         // attempting to open the ports when we are in between app and bootloader modes helps to flush out the old port settings
         try
         {
-            thisPortName = QString::fromStdString(midi_in->getPortName(port_in));
+            thisPortName = portNameFix(QString::fromStdString(midi_in->getPortName(port_in)));
             DM_OUT << "Opening ports..." << thisPortName;
 
             midi_in->openPort(port_in);
@@ -428,6 +431,20 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 
         QThread::sleep(1);
     }
+
+// brute force, but necessary to reset the ports
+#ifdef Q_OS_WIN
+    // restart:
+
+    QMessageBox msgBox;
+    msgBox.setText("The application must now re-start to refresh the MIDI driver.");
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.setDefaultButton(QMessageBox::Ok);
+    msgBox.exec();
+
+    qApp->quit();
+    QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+#endif
 
     DM_OUT << "slotResetConnections set callback";
     midi_in->ignoreTypes( false, false, false );
@@ -848,7 +865,12 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
 
 void MidiDeviceManager::slotEnterBootloader()
 {
-    signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
+#ifdef Q_OS_WIN
+    emit signalFwConsoleMessage("\nSending Enter bootloader Command, device and application will reboot.\n");
+#else
+    emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
+#endif
+
     signalFwProgress(20); // increment progress bar
     // TODO - this works for qunexus, add code for other controllers
     switch (PID)
