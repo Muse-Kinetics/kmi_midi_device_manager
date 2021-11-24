@@ -66,20 +66,20 @@
 
 // QUNEXUS NEW
 
-#ifdef Q_OS_MAC
-    #define QUNEXUS_IN_P1 "QuNexus Control Surface"
-    #define QUNEXUS_IN_P2 "QuNexus Expander"
-    #define QUNEXUS_IN_P3 "QuNexus CV"
-    #define QUNEXUS_OUT_P1 "QuNexus Control Surface"
-    #define QUNEXUS_OUT_P2 "QuNexus Expander"
-    #define QUNEXUS_OUT_P3 "QuNexus CV"
-#else
+#ifdef Q_OS_WIN
     #define QUNEXUS_IN_P1 "QuNexus"
     #define QUNEXUS_IN_P2 "MIDIIN2 (QuNexus)"
     #define QUNEXUS_IN_P3 "MIDIIN3 (QuNexus)"
     #define QUNEXUS_OUT_P1 "QuNexus"
     #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
     #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
+#else
+    #define QUNEXUS_IN_P1 "QuNexus Control Surface"
+    #define QUNEXUS_IN_P2 "QuNexus Expander"
+    #define QUNEXUS_IN_P3 "QuNexus CV"
+    #define QUNEXUS_OUT_P1 "QuNexus Control Surface"
+    #define QUNEXUS_OUT_P2 "QuNexus Expander"
+    #define QUNEXUS_OUT_P3 "QuNexus CV"
 #endif
 
 // K-BOARD
