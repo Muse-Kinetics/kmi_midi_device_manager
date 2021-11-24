@@ -874,6 +874,11 @@ void MidiDeviceManager::slotBeginBlTimer()
 
     switch (PID)
     {
+#ifdef Q_OS_WIN
+    case PID_QUNEXUS:
+        timeoutTime = 10000;
+        break;
+#endif
     case PID_QUNEO: // need extra time for QuNeo
         timeoutTime = 5000;
         break;
@@ -881,9 +886,9 @@ void MidiDeviceManager::slotBeginBlTimer()
         timeoutTime = 3000;
     }
 
-#ifndef Q_OS_WIN
+//#ifndef Q_OS_WIN
     QTimer::singleShot(timeoutTime, this, SLOT(slotBootloaderTimeout()));
-#endif
+//#endif
 }
 
 void MidiDeviceManager::slotBootloaderTimeout()
