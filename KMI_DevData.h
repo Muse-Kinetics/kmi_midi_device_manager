@@ -47,8 +47,9 @@
 
 // QUNEXUS OLD
 
-    #define QUNEXUS_BL_PORT  "QuNexus Port 1"
+
 #ifdef Q_OS_MAC
+    #define QUNEXUS_BL_PORT  "QuNexus Port 1"
     #define QUNEXUS_OLD_IN_P1 "QuNexus Port 1"
     #define QUNEXUS_OLD_IN_P2 "QuNexus Port 2"
     #define QUNEXUS_OLD_IN_P3 "QuNexus Port 3"
@@ -56,31 +57,32 @@
     #define QUNEXUS_OLD_OUT_P2 "QuNexus Port 2"
     #define QUNEXUS_OLD_OUT_P3 "QuNexus Port 3"
 #else
+    #define QUNEXUS_BL_PORT "QuNexus Control Surface"
     #define QUNEXUS_OLD_IN_P1 "QuNexus"
     #define QUNEXUS_OLD_IN_P2 "MIDIIN2 (QuNexus)"
     #define QUNEXUS_OLD_IN_P3 "MIDIIN3 (QuNexus)"
     #define QUNEXUS_OLD_OUT_P1 "QuNexus"
     #define QUNEXUS_OLD_OUT_P2 "MIDIOUT2 (QuNexus)"
-    #define QUNEXUS_OLD_OUT_P2 "MIDIOUT2 (QuNexus)"
+    #define QUNEXUS_OLD_OUT_P3 "MIDIOUT3 (QuNexus)"
 #endif
 
 // QUNEXUS NEW
 
-#ifdef Q_OS_MAC
+//#ifdef Q_OS_MAC
     #define QUNEXUS_IN_P1 "QuNexus Control Surface"
     #define QUNEXUS_IN_P2 "QuNexus Expander"
     #define QUNEXUS_IN_P3 "QuNexus CV"
     #define QUNEXUS_OUT_P1 "QuNexus Control Surface"
     #define QUNEXUS_OUT_P2 "QuNexus Expander"
     #define QUNEXUS_OUT_P3 "QuNexus CV"
-#else
-    #define QUNEXUS_IN_P1 "QuNexus"
-    #define QUNEXUS_IN_P2 "MIDIIN2 (QuNexus)"
-    #define QUNEXUS_IN_P3 "MIDIIN3 (QuNexus)"
-    #define QUNEXUS_OUT_P1 "QuNexus"
-    #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
-    #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
-#endif
+//#else
+//    #define QUNEXUS_IN_P1 "QuNexus"
+//    #define QUNEXUS_IN_P2 "MIDIIN2 (QuNexus)"
+//    #define QUNEXUS_IN_P3 "MIDIIN3 (QuNexus)"
+//    #define QUNEXUS_OUT_P1 "QuNexus"
+//    #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
+//    #define QUNEXUS_OUT_P2 "MIDIOUT3 (QuNexus)"
+//#endif
 
 // K-BOARD
 
