@@ -797,13 +797,36 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
 }
 
-void MidiDeviceManager::slotOpenFirmwareFile(QString filePath)
+bool MidiDeviceManager::slotOpenFirmwareFile(QString filePath)
 {
     DM_OUT << "slotOpenFirmwareFile called, file: " << filePath;
     //Load Firmware File into a byte array
     firmware = new QFile(filePath);
-    firmware->open(QIODevice::ReadOnly);
-    firmwareByteArray = firmware->readAll();
+    if (firmware->open(QIODevice::ReadOnly))
+    {
+        firmwareByteArray = firmware->readAll();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool MidiDeviceManager::slotOpenBootloaderFile(QString filePath)
+{
+    DM_OUT << "slotOpenBootloaderFile called, file: " << filePath;
+    //Load Firmware File into a byte array
+    bootloader = new QFile(filePath);
+    if (bootloader->open(QIODevice::ReadOnly))
+    {
+        bootloaderByteArray = bootloader->readAll();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 // set up the firmware update process - enter bootloader, wait, send ud
@@ -853,11 +876,31 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
 
 void MidiDeviceManager::slotEnterBootloader()
 {
-    signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
-    signalFwProgress(20); // increment progress bar
-    // TODO - this works for qunexus, add code for other controllers
+    DM_OUT << "slotEnterBootloader called";
     switch (PID)
     {
+    case PID_SOFTSTEP:
+        if ((uchar)deviceFirmwareVersion[0] < 1) // pre-bootloader firmware
+        {
+            // version 98 is a placeholder for ZenDesk users and has a bootloader
+            // version 99 is the trojan horse bootloader update
+            // everything else needs to have the bootloader installed
+            if (((uchar)deviceFirmwareVersion[0] == 9 && (uchar)deviceFirmwareVersion[1] < 8) ||
+                 (uchar)deviceFirmwareVersion[0] < 9)
+            {
+                signalFwConsoleMessage("\nSending Update bootloader Command, device will reboot.\n");
+
+                // this will install the firmware and reboot the device into bootloader mode
+                slotSendSysExBA(bootloaderByteArray);
+            }
+        }
+        else // this should be the standard method moving forward
+        {
+            signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
+            slotSendSysEx(_bl_softstep, sizeof(_bl_softstep));
+        }
+
+        break;
     case PID_QUNEXUS:
         slotSendSysEx(_bl_qunexus, sizeof(_bl_qunexus));
         break;
@@ -865,8 +908,15 @@ void MidiDeviceManager::slotEnterBootloader()
         slotSendSysEx(_bl_quneo, sizeof(_bl_quneo));
         break;
     default:
-        DM_OUT << "bootloader command not configured for this device";
+        DM_OUT << "Bootloader command not configured for this device";
     }
+
+    if (PID != PID_SOFTSTEP)
+    {
+        signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
+    }
+
+    signalFwProgress(20); // increment progress bar
 
     DM_OUT << "BL timeout counter started";
     emit signalBeginBlTimer();
