@@ -31,7 +31,7 @@
 #include "kmi_ports.h"
 #include <QMessageBox>
 
-#define MDM_DEBUG_ENABLED 1
+//#define MDM_DEBUG_ENABLED 1
 
 // debugging macro
 #define DM_OUT qDebug() << objectName << ": "
@@ -44,6 +44,8 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     lookupPID.insert(PID_AUX, "AUX");
     lookupPID.insert(PID_STRINGPORT, "StringPort");
     lookupPID.insert(PID_SOFTSTEP, "SoftStep");
+    lookupPID.insert(PID_SOFTSTEP2_OLD, "SSCOM");
+    lookupPID.insert(PID_SOFTSTEP_BL, "SoftStep Bootloader");
     lookupPID.insert(PID_12STEP, "12 Step");
     lookupPID.insert(PID_QUNEXUS, "QuNexus");
     lookupPID.insert(PID_KBOARD, "K-Board");
@@ -59,10 +61,8 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     lookupPID.insert(PID_BOPPAD, "BopPad");
     lookupPID.insert(PID_BOPPAD_BL, "BopPad Bootloader");
 
-
-    PID = initPID;
-    deviceName = lookupPID.value(PID);
-    objectName = objectNameInit;
+    updatePID(initPID); // updates PID and deviceName
+    objectName = objectNameInit; // unmodifiable
 
 #ifdef MDM_DEBUG_ENABLED
     DM_OUT << "MidiDeviceManager created - " << deviceName << " PID:" << PID;
@@ -100,6 +100,12 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     connect(this, SIGNAL(signalBeginBlTimer()), this, SLOT(slotBeginBlTimer()));
     connect(this, SIGNAL(signalBeginFwTimer()), this, SLOT(slotBeginFwTimer()));
     connect(this, SIGNAL(signalStopGlobalTimer()), this, SLOT(slotStopGlobalTimer()));
+}
+
+void MidiDeviceManager::updatePID(int thisPID)
+{
+    PID = thisPID;
+    deviceName = lookupPID.value(PID);
 }
 
 // **********************************************************************************
@@ -378,12 +384,23 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         {
             if (thisPort <= numOutPorts)
             {
+                QString newPortName;
+                try
+                {
 #ifdef Q_OS_WIN
-                QString newPortName = portNameFix(QString::fromStdString(midi_out->getPortName(thisPort)));
+                    newPortName = portNameFix(QString::fromStdString(midi_out->getPortName(thisPort)));
 #else
-                QString newPortName = QString::fromStdString(midi_out->getPortName(thisPort));
+                    newPortName = QString::fromStdString(midi_out->getPortName(thisPort));
 #endif
-                DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
+                    DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
+                }
+                catch (RtMidiError &error)
+                {
+                    /* Return the error */
+                    newPortName = ""; // not detected
+                    DM_OUT << "Port #" << port_in << " not found, retrying. Error Message: " << QString::fromStdString(error.getMessage());
+
+                }
 
                 // confirm we are either going bootLoader->app or app->bootLoader
                 if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
@@ -531,7 +548,6 @@ void MidiDeviceManager::slotPollVersion()
     if (pollingStatus == false) return; // avoid starting the timer multiple times
 
 
-
     // ports aren't setup yet
     if (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open)
     {
@@ -572,7 +588,7 @@ void MidiDeviceManager::slotPollVersion()
         return;
     }
 
-    if (deviceName == "SoftStep") // softStep doesn't use the universal syx dev id request
+    if (deviceName == "SSCOM") // old softStep firmware doesn't use the universal syx dev id request
     {
         slotSendSysEx(_fw_req_softstep, sizeof(_fw_req_softstep));
     }
@@ -921,16 +937,12 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
 void MidiDeviceManager::slotEnterBootloader()
 {
     DM_OUT << "slotEnterBootloader called";
-#ifdef Q_OS_WIN
-    emit signalFwConsoleMessage("\nSending Enter bootloader Command, device and application will reboot.\n");
-#else
-    emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
-#endif
 
     // TODO - this works for qunexus, add code for other controllers
     switch (PID)
     {
     case PID_SOFTSTEP:
+    case PID_SOFTSTEP2_OLD:
         if ((uchar)deviceFirmwareVersion[0] < 1) // pre-bootloader firmware
         {
             // version 98 is a placeholder for ZenDesk users and has a bootloader
@@ -939,7 +951,7 @@ void MidiDeviceManager::slotEnterBootloader()
             if (((uchar)deviceFirmwareVersion[0] == 9 && (uchar)deviceFirmwareVersion[1] < 8) ||
                  (uchar)deviceFirmwareVersion[0] < 9)
             {
-                signalFwConsoleMessage("\nSending Update bootloader Command, device will reboot.\n");
+                signalFwConsoleMessage("\n*** Installing bootloader *** - device will reboot several times!\n");
 
                 // this will install the firmware and reboot the device into bootloader mode
                 slotSendSysExBA(bootloaderByteArray);
@@ -947,7 +959,6 @@ void MidiDeviceManager::slotEnterBootloader()
         }
         else // this should be the standard method moving forward
         {
-            signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
             slotSendSysEx(_bl_softstep, sizeof(_bl_softstep));
         }
 
@@ -962,9 +973,13 @@ void MidiDeviceManager::slotEnterBootloader()
         DM_OUT << "Bootloader command not configured for this device";
     }
 
-    if (PID != PID_SOFTSTEP)
+    if (PID != PID_SOFTSTEP && PID != PID_SOFTSTEP2_OLD)
     {
-        signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
+#ifdef Q_OS_WIN
+        emit signalFwConsoleMessage("\nSending Enter bootloader Command, device and application will reboot.\n");
+#else
+        emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
+#endif
     }
 
     signalFwProgress(20); // increment progress bar

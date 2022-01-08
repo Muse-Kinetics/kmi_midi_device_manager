@@ -113,6 +113,9 @@ public:
     uchar RPNorNRPN;
 
 // public functions
+
+    void updatePID(int thisPID);
+
     bool updatePortIn(int port);
     bool updatePortOut(int port);
 

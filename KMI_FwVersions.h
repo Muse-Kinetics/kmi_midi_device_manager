@@ -55,7 +55,12 @@ unsigned char _fw_ver_12step[] =
 
 unsigned char _fw_ver_softstep[] =
 {
-    0, 9, 8
+    1, 0, 0
+};
+
+unsigned char _bl_ver_softstep[] =
+{
+    1, 0, 0
 };
 
 #endif // KMI_FWVERSIONS_H

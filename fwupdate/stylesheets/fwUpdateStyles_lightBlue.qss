@@ -1,3 +1,8 @@
+QTextEdit {
+    background-color: black;
+}
+
+
 QLabel {
         font-family: "Open Sans Semibold";
         font-size: 12pt;
