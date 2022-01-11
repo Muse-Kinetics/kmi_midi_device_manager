@@ -23,7 +23,7 @@ unsigned char _bl_ver_qunexus[] =
 };
 unsigned char _fw_ver_qunexus[] =
 {
-    2, 0, 5
+    2, 0, 7
 };
 
 unsigned char _fw_ver_kboard[] =
@@ -55,7 +55,12 @@ unsigned char _fw_ver_12step[] =
 
 unsigned char _fw_ver_softstep[] =
 {
-    93
+    1, 0, 0
+};
+
+unsigned char _bl_ver_softstep[] =
+{
+    1, 0, 0
 };
 
 #endif // KMI_FWVERSIONS_H

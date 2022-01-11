@@ -76,6 +76,10 @@ public:
     QFile *firmware;
     QByteArray firmwareByteArray;
 
+    // for bootloader trojan horse firmware, ie softstep
+    QFile *bootloader;
+    QByteArray bootloaderByteArray;
+
     //Helper variables to process sysex
     QByteArray sysExMessage; //Message to be processed;
 
@@ -109,6 +113,9 @@ public:
     uchar RPNorNRPN;
 
 // public functions
+
+    void updatePID(int thisPID);
+
     bool updatePortIn(int port);
     bool updatePortOut(int port);
 
@@ -189,7 +196,8 @@ public slots:
     void slotProcessSysEx(QByteArray sysExMessageByteArray, std::vector< unsigned char > *message);
 
     // firmware update
-    void slotOpenFirmwareFile(QString filePath);
+    bool slotOpenFirmwareFile(QString filePath);
+    bool slotOpenBootloaderFile(QString filePath);
     void slotRequestFirmwareUpdate();
     void slotEnterBootloader();
     void slotBeginBlTimer();

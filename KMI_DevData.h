@@ -21,7 +21,7 @@
 #define PID_STRINGPORT      1
 #define PID_SOFTSTEP1       10      // two ports that get translated
 #define PID_SOFTSTEP2_OLD   11      // two ports that get translated
-#define PID_SOFTSTEP        12      // hard coded portnames
+#define PID_SOFTSTEP        12      // hard coded portnames, uses MIDI PID 11
 #define PID_SOFTSTEP_BL     13      // hard coded portnames
 #define PID_12STEP_OLD      20      // two ports that get translated
 #define PID_12STEP          21      // hard coded portnames
@@ -47,8 +47,9 @@
 
 // QUNEXUS OLD
 
-    #define QUNEXUS_BL_PORT  "QuNexus Port 1"
+
 #ifdef Q_OS_MAC
+    #define QUNEXUS_BL_PORT  "QuNexus Port 1"
     #define QUNEXUS_OLD_IN_P1 "QuNexus Port 1"
     #define QUNEXUS_OLD_IN_P2 "QuNexus Port 2"
     #define QUNEXUS_OLD_IN_P3 "QuNexus Port 3"
@@ -56,32 +57,32 @@
     #define QUNEXUS_OLD_OUT_P2 "QuNexus Port 2"
     #define QUNEXUS_OLD_OUT_P3 "QuNexus Port 3"
 #else
+    #define QUNEXUS_BL_PORT "QuNexus Control Surface"
     #define QUNEXUS_OLD_IN_P1 "QuNexus"
     #define QUNEXUS_OLD_IN_P2 "MIDIIN2 (QuNexus)"
     #define QUNEXUS_OLD_IN_P3 "MIDIIN3 (QuNexus)"
     #define QUNEXUS_OLD_OUT_P1 "QuNexus"
     #define QUNEXUS_OLD_OUT_P2 "MIDIOUT2 (QuNexus)"
-    #define QUNEXUS_OLD_OUT_P2 "MIDIOUT2 (QuNexus)"
+    #define QUNEXUS_OLD_OUT_P3 "MIDIOUT3 (QuNexus)"
 #endif
 
 // QUNEXUS NEW
 
-#ifdef Q_OS_WIN
-    #define QUNEXUS_IN_P1 "QuNexus"
-    #define QUNEXUS_IN_P2 "MIDIIN2 (QuNexus)"
-    #define QUNEXUS_IN_P3 "MIDIIN3 (QuNexus)"
-    #define QUNEXUS_OUT_P1 "QuNexus"
-    #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
-    #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
-#else
+//#ifdef Q_OS_MAC
     #define QUNEXUS_IN_P1 "QuNexus Control Surface"
     #define QUNEXUS_IN_P2 "QuNexus Expander"
     #define QUNEXUS_IN_P3 "QuNexus CV"
     #define QUNEXUS_OUT_P1 "QuNexus Control Surface"
     #define QUNEXUS_OUT_P2 "QuNexus Expander"
     #define QUNEXUS_OUT_P3 "QuNexus CV"
-#endif
-
+//#else
+//    #define QUNEXUS_IN_P1 "QuNexus"
+//    #define QUNEXUS_IN_P2 "MIDIIN2 (QuNexus)"
+//    #define QUNEXUS_IN_P3 "MIDIIN3 (QuNexus)"
+//    #define QUNEXUS_OUT_P1 "QuNexus"
+//    #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
+//    #define QUNEXUS_OUT_P2 "MIDIOUT3 (QuNexus)"
+//#endif
 // K-BOARD
 
 #ifdef Q_OS_MAC
@@ -158,11 +159,13 @@
 // SOFTSTEP CURRENT
 
 #ifdef Q_OS_MAC
+    #define SS_BL_PORT "SoftStep Bootloader Port 1"
     #define SS_IN_P1 "SoftStep Control Surface"
     #define SS_IN_P2 "SoftStep Expander"
     #define SS_OUT_P1 "SoftStep Control Surface"
     #define SS_OUT_P2 "SoftStep Expander"
 #else
+    #define SS_BL_PORT "SoftStep Bootloader"
     #define SS_IN_P1 "SoftStep"
     #define SS_IN_P2 "MIDIIN2 (SoftStep)"
     #define SS_OUT_P1 "SoftStep"

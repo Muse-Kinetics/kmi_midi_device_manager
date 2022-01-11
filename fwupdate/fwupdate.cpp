@@ -17,12 +17,13 @@ fwUpdate::fwUpdate(QWidget *parent, QString initDeviceName, QString initAppFwVer
     qDebug() << "Create new fwUpdate window: " << deviceName;
 
     //StyleSheets for Preset Library
-    blueStyleFile = new QFile(":/stylesheets/resources/stylesheets/RedButtonStyleSheet.qss");
+
+    blueStyleFile = new QFile("://resources/stylesheets/RedButtonStyleSheet.qss"); // eb todo - fix this in quneo/qunexus
     blueStyleFile->open(QFile::ReadOnly);
     blueStyleString = QLatin1String(blueStyleFile->readAll());
 
     //StyleSheets for Preset Library
-    grayStyleFile = new QFile(":/stylesheets/resources/stylesheets/GrayButtonStyleSheet.qss");
+    grayStyleFile = new QFile("://resources/stylesheets/GrayButtonStyleSheet.qss"); // eb todo - fix this in quneo/qunexus
     grayStyleFile->open(QFile::ReadOnly);
     grayStyleString = QLatin1String(grayStyleFile->readAll());
 
@@ -77,6 +78,10 @@ void fwUpdate::slotAppendTextToConsole(QString thisText)
     qDebug() << "slotAppendTextToConsole called - thisText: " << thisText;
     ui->console->insertPlainText(thisText);
     ui->console->verticalScrollBar()->setValue(ui->console->verticalScrollBar()->maximum());
+
+//    QTextCursor c = ui->console->textCursor();
+//    c.movePosition(QTextCursor::End);
+//    ui->console->setTextCursor(c);
 }
 
 void fwUpdate::slotUpdateProgressBar(int thisPercent)
@@ -108,7 +113,7 @@ void fwUpdate::slotFwUpdateComplete(bool success)
         updateSuccessful = true;
         slotUpdateProgressBar(100);
         int fwLength = (deviceName == "QuNeo") ? 8 : 7; // fix for quneo odd length firmware
-        ui->console->insertPlainText("\nFirmware successfully updated to version " + appFwVer.right(fwLength) + "\n");
+        slotAppendTextToConsole("\nFirmware successfully updated to version " + appFwVer.right(fwLength) + "\n");
         ui->interrupt_warning->hide();
 
         ui->butt_retry->hide();
