@@ -57,6 +57,8 @@ public:
     bool port_in_open;          // flag if device input port is available and open
     bool port_out_open;         // flag if device output port is available and open
 
+    bool restart;               // flag to halt all actions and restart the app
+
     // RtMidi devices
     RtMidiIn *midi_in;
     RtMidiOut *midi_out;

@@ -470,8 +470,17 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 #ifdef Q_OS_WIN
     // restart:
 
+    restart = true;
+
     QMessageBox msgBox;
-    msgBox.setText("The application must now re-start to refresh the MIDI driver.");
+    if (initialBootloaderMode) // if we are going bootloader->app
+    {
+        msgBox.setText("Firmware update sent.\n\nThe application must now re-start to refresh the MIDI driver.");
+    }
+    else // app->bootloader
+    {
+        msgBox.setText("Bootloader command sent.\n\nThe application must now re-start to refresh the MIDI driver.");
+    }
     msgBox.setStandardButtons(QMessageBox::Ok);
     msgBox.setDefaultButton(QMessageBox::Ok);
     msgBox.exec();
@@ -1105,6 +1114,8 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1, uchar d2)
 // Send a MIDI message. Handles 1/2/3 byte packets. Chan goes last to allow 2/3 byte system common messages to omit channel
 void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 255, uchar chan = 255)
 {
+    if (restart) return;
+
     //DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4").arg(status).arg(d1).arg(d2).arg(chan);
     uchar newStatus;
     std::vector<uchar> packet;
