@@ -1116,8 +1116,12 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
 {
     if (restart) return;
 
-    //DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4").arg(status).arg(d1).arg(d2).arg(chan);
-    uchar newStatus;
+    uchar newStatus = status + chan;
+
+#ifdef MDM_DEBUG_ENABLED
+    DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4").arg(status).arg(d1).arg(d2).arg(chan);
+#endif
+
     std::vector<uchar> packet;
     packet.clear();
 
@@ -1140,7 +1144,6 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     case MIDI_CONTROL_CHANGE:
     case MIDI_PITCH_BEND:
         if (chan > 127 || d1 > 127 || d2 > 127) return; // catch bad data
-        newStatus = (status + chan);
         packet.push_back(newStatus);
         packet.push_back(d1);
         packet.push_back(d2);
@@ -1149,44 +1152,49 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     case MIDI_PROG_CHANGE:
     case MIDI_CHANNEL_PRESSURE:
         if (chan > 127 || d1 > 127) return; // catch bad data
-        newStatus = (status + chan);
         packet.push_back(newStatus);
         packet.push_back(d1);
         break;
-
-    // **********************************
-    // ****** SYS COMMON MESSAGES *******
-    // **********************************
-
-    // three byte packets
-    case MIDI_MTC:
-    case MIDI_SONG_POSITION:
-        if (d1 > 127 || d2 > 127) return; // catch bad data
-        packet.push_back(status);
-        packet.push_back(d1);
-        packet.push_back(d2);
-        break;
-    // two byte packets
-    case MIDI_SONG_SELECT:
-        if (d1 > 127) return; // catch bad data
-        packet.push_back(status);
-        packet.push_back(d1);
-        break;
-    // single byte packets
-    case MIDI_TUNE_REQUEST:
-    case MIDI_RT_CLOCK:
-    case MIDI_RT_START:
-    case MIDI_RT_CONTINUE:
-    case MIDI_RT_STOP:
-    case MIDI_RT_ACTIVE_SENSE:
-    case MIDI_RT_RESET:
-        packet.push_back(status);
-        break;
-    // catch undefined and bad messages
     default:
-        return; // go no further
-        break;
-    }
+
+        // **********************************
+        // ****** SYS COMMON MESSAGES *******
+        // **********************************
+
+        //DM_OUT << "sysCommon: " << newStatus;
+        switch (newStatus)
+        {
+
+        // three byte packets
+        case MIDI_MTC:
+        case MIDI_SONG_POSITION:
+            if (d1 > 127 || d2 > 127) return; // catch bad data
+            packet.push_back(newStatus);
+            packet.push_back(d1);
+            packet.push_back(d2);
+            break;
+        // two byte packets
+        case MIDI_SONG_SELECT:
+            if (d1 > 127) return; // catch bad data
+            packet.push_back(newStatus);
+            packet.push_back(d1);
+            break;
+        // single byte packets
+        case MIDI_TUNE_REQUEST:
+        case MIDI_RT_CLOCK:
+        case MIDI_RT_START:
+        case MIDI_RT_CONTINUE:
+        case MIDI_RT_STOP:
+        case MIDI_RT_ACTIVE_SENSE:
+        case MIDI_RT_RESET:
+            packet.push_back(newStatus);
+            break;
+        // catch undefined and bad messages
+        default:
+            return; // go no further
+            break;
+        } // end switch (sysCommon)
+    } // end switch (status)
 
 #ifdef MDM_DEBUG_ENABLED
     if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;

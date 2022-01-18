@@ -119,7 +119,7 @@ void fwUpdate::slotFwUpdateComplete(bool success)
         ui->butt_retry->hide();
 
         ui->butt_done->setText("Done"); // change text but for now keep as a "successful" exit, which should re-send connection checks
-        ui->butt_done->setGeometry(FW_WIN_X_CENTER, FW_BUTT_ROW1, FW_BUTT_WIDTH, FW_BUTT_HEIGHT); // move "done" button to the left
+        ui->butt_done->setGeometry(FW_WIN_X_CENTER - FW_BUTT_X_CENTER, FW_BUTT_ROW1, FW_BUTT_WIDTH, FW_BUTT_HEIGHT); // move "done" button to the left
         ui->butt_done->show();
 
         emit signalFwUpdateSuccess();
