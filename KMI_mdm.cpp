@@ -84,6 +84,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     callbackIsSet = false;
     fwUpdateRequested = false;
     globalsRequested = false;
+    hackStopTimer = false;
 
     // firmware and bootloader timeout timer
     //timeoutFwBl = new QTimer(this);
@@ -117,12 +118,14 @@ bool MidiDeviceManager::updatePortIn(int port)
     DM_OUT << "updatePortIn called";
     // update and try to re-open
     port_in = port;
+
     if (slotOpenMidiIn())
     {
         port_in_open = true;
         return 1;
     }
     port_in_open = false;
+    slotCloseMidiIn(SIGNAL_SEND); // close the port if we failed
     return 0;
 }
 
@@ -137,6 +140,7 @@ bool MidiDeviceManager::updatePortOut(int port)
         return 1;
     }
     port_out_open = false;
+    slotCloseMidiOut(SIGNAL_SEND); // close the port if we failed
     return 0;
 }
 
@@ -198,10 +202,16 @@ bool MidiDeviceManager::slotOpenMidiIn()
 {
     DM_OUT << "slotOpenMidiIn called - port: " << port_in;
 
+    if (port_in == -1)
+    {
+        DM_OUT << "slotOpenMidiIn: ERROR, port does not exist (-1)";
+        return 0;
+    }
+
     try
     {
         // first close the port to avoid errors
-        if (!slotCloseMidiIn()) DM_OUT << "couldn't close in port: " << port_in;
+        if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
         // setup RtMidi connections
 
         //open ports
@@ -233,10 +243,16 @@ bool MidiDeviceManager::slotOpenMidiOut()
 {
     DM_OUT << "slotOpenMidiOut called - port: " << port_out;
 
+    if (port_out == -1)
+    {
+        DM_OUT << "slotOpenMidiOut: ERROR, port does not exist (-1)";
+        return 0;
+    }
+
     try
     {
         // first close the port to avoid errors
-        if (!slotCloseMidiOut()) DM_OUT << "couldn't close out port: " << port_out;
+        if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
 
         //open ports
         midi_out->openPort(port_out);
@@ -255,9 +271,9 @@ bool MidiDeviceManager::slotOpenMidiOut()
     return 1;
 }
 
-bool MidiDeviceManager::slotCloseMidiIn()
+bool MidiDeviceManager::slotCloseMidiIn(bool signal)
 {
-    //DM_OUT << "slotCloseMidiIn called";
+    DM_OUT << "slotCloseMidiIn called, send disconnect signal: " << signal;
 
     try
     {
@@ -278,6 +294,8 @@ bool MidiDeviceManager::slotCloseMidiIn()
         return 0;
     }
 
+    if (signal == SIGNAL_NONE) return 1; // don't alert the app to connection change
+
     // alert host application that we are disconnected
     connected = false;
     emit signalConnected(false);
@@ -286,9 +304,9 @@ bool MidiDeviceManager::slotCloseMidiIn()
     return 1;
 }
 
-bool MidiDeviceManager::slotCloseMidiOut()
+bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 {
-    //DM_OUT << "slotCloseMidiOut called";
+    DM_OUT << "slotCloseMidiOut called, send disconnect signal: " << signal;
 
     try
     {
@@ -303,6 +321,8 @@ bool MidiDeviceManager::slotCloseMidiOut()
         DM_OUT << "CLOSE MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
         return 0;
     }
+
+    if (signal == SIGNAL_NONE) return 1; // don't alert the app to connection change
 
     // alert host application that we are disconnected
     if (connected) // check so we only emit once
@@ -697,8 +717,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     {
         DM_OUT << "*** FEEDBACK LOOP DETECTED, MIDI PORTS CLOSED *** - " << sysExMessageByteArray;
         this->disconnect(SIGNAL(signalRxMidi_raw(uchar, uchar, uchar, uchar)));
-        slotCloseMidiIn(); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
-        slotCloseMidiOut(); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+        slotCloseMidiIn(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+        slotCloseMidiOut(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
         emit signalFeedbackLoopDetected(this);
         slotErrorPopup("MIDI FEEDBACK LOOP DETECTED\nPorts Closed");
     }

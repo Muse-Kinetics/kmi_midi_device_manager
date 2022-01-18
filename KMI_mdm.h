@@ -39,6 +39,14 @@ enum PARAM_DATA_TYPES
 
 };
 
+enum
+{
+    SIGNAL_NONE,
+    SIGNAL_SEND
+};
+
+
+
 class MidiDeviceManager : public QWidget
 {
     Q_OBJECT
@@ -178,8 +186,8 @@ signals:
 public slots:
     bool slotOpenMidiIn();
     bool slotOpenMidiOut();
-    bool slotCloseMidiIn();
-    bool slotCloseMidiOut();
+    bool slotCloseMidiIn(bool);
+    bool slotCloseMidiOut(bool);
 
     void slotResetConnections(QString portNameApp, QString portNameBootloader);
 
