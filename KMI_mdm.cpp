@@ -106,6 +106,7 @@ void MidiDeviceManager::updatePID(int thisPID)
 {
     PID = thisPID;
     deviceName = lookupPID.value(PID);
+    qDebug() << "updatePID: " << PID << " deviceName: " << deviceName;
 }
 
 // **********************************************************************************
@@ -318,7 +319,7 @@ bool MidiDeviceManager::slotCloseMidiOut()
 // reset connections is needed when the bootloader and app port names don't match
 void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNameBootloader)
 {
-    DM_OUT << "slotResetConnections called - portName: " << portNameApp;
+    DM_OUT << "slotResetConnections called - portName: " << portNameApp << " portNameBootloader: " << portNameBootloader << "bootloaderMode: " << bootloaderMode;
     bool refreshDone = false;
     bool initialBootloaderMode = bootloaderMode;
 
@@ -441,6 +442,9 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         if (!initialBootloaderMode && thisPortName == portNameBootloader) // test for app->bootloader
         {
             DM_OUT << "app -> bootloader, thisPortName: " << thisPortName << " portNameBootloader: " << portNameBootloader;
+
+            if (thisPortName == "SoftStep Bootloader Port 1") updatePID(PID_SOFTSTEP); // hack for softstep
+
             refreshDone = true;
         }
         else if (initialBootloaderMode && thisPortName == portNameApp) // test if bootloader->app
@@ -518,7 +522,7 @@ void MidiDeviceManager::slotStartPolling(QString caller)
 
     // some devices take longer to boot up
     if (deviceName == "12 Step" ||
-        deviceName == "SoftStep")
+        deviceName == "SSCOM")
     {
         pollTime = 2000;
     }
