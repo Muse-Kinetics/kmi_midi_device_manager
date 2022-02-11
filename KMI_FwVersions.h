@@ -23,7 +23,7 @@ unsigned char _bl_ver_qunexus[] =
 };
 unsigned char _fw_ver_qunexus[] =
 {
-    2, 0, 7
+    2, 0, 9
 };
 
 unsigned char _fw_ver_kboard[] =

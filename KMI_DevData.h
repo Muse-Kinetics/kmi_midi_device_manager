@@ -83,7 +83,6 @@
 //    #define QUNEXUS_OUT_P2 "MIDIOUT2 (QuNexus)"
 //    #define QUNEXUS_OUT_P2 "MIDIOUT3 (QuNexus)"
 //#endif
-
 // K-BOARD
 
 #ifdef Q_OS_MAC

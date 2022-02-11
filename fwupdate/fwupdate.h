@@ -10,6 +10,21 @@
 #include <QObject>
 #include <QtWidgets>
 
+#define FW_WIN_WIDTH 500
+#define FW_WIN_HEIGHT 350
+#define FW_WIN_X_CENTER FW_WIN_WIDTH / 2
+#define FW_WIN_Y_CENTER FW_WIN_HEIGHT / 2
+
+#define FW_BUTT_WIDTH 80
+#define FW_BUTT_HEIGHT 24
+#define FW_BUTT_PADDING 8
+#define FW_BUTT_X_CENTER FW_BUTT_WIDTH / 2
+#define FW_BUTT_Y_CENTER FW_BUTT_HEIGHT / 2
+#define FW_BUTT_COL1 FW_WIN_X_CENTER - (FW_BUTT_WIDTH + FW_BUTT_PADDING)
+#define FW_BUTT_COL2 FW_WIN_X_CENTER + (FW_BUTT_WIDTH + FW_BUTT_PADDING)
+#define FW_BUTT_ROW1 310
+
+
 namespace Ui {
 class fwUpdate;
 }
