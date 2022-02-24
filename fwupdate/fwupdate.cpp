@@ -18,12 +18,12 @@ fwUpdate::fwUpdate(QWidget *parent, QString initDeviceName, QString initAppFwVer
 
     //StyleSheets for Preset Library
 
-    blueStyleFile = new QFile(":/stylesheets/resources/stylesheets/BlueButtonStyleSheet.qss"); // eb todo - fix this in quneo/qunexus
+    blueStyleFile = new QFile(":/stylesheets/RedButtonStyleSheet.qss"); // eb todo - fix this in quneo/qunexus
     blueStyleFile->open(QFile::ReadOnly);
     blueStyleString = QLatin1String(blueStyleFile->readAll());
 
     //StyleSheets for Preset Library
-    grayStyleFile = new QFile(":/stylesheets/resources/stylesheets/GrayButtonStyleSheet.qss"); // eb todo - fix this in quneo/qunexus
+    grayStyleFile = new QFile(":/stylesheets/GrayButtonStyleSheet.qss"); // eb todo - fix this in quneo/qunexus
     grayStyleFile->open(QFile::ReadOnly);
     grayStyleString = QLatin1String(grayStyleFile->readAll());
 

@@ -59,6 +59,7 @@ public:
     // product ID
     int PID;
     int initPID;
+    int PID_MIDI; // added for SoftStep to differentiate between rev1 and rev2
 
     // connection status based on if firmware matches. Firmware dialogs are handled before this is set true.
     bool connected;             // flag if device firmware matches and is connected
