@@ -112,8 +112,9 @@ void fwUpdate::slotFwUpdateComplete(bool success)
         qDebug() << "updateSuccessful = true";
         updateSuccessful = true;
         slotUpdateProgressBar(100);
-        int fwLength = (deviceName == "QuNeo") ? 8 : 7; // fix for quneo odd length firmware
-        slotAppendTextToConsole("\nFirmware successfully updated to version " + appFwVer.right(fwLength) + "\n");
+
+        int fwLength = (deviceName == "QuNeo") ? 8 : appFwVer.length(); // fix for quneo odd length firmware
+        slotAppendTextToConsole("\nFirmware successfully updated to " + appFwVer.right(fwLength) + "\n");
         ui->interrupt_warning->hide();
 
         ui->butt_retry->hide();
