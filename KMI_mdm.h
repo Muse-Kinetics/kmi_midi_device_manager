@@ -39,6 +39,14 @@ enum PARAM_DATA_TYPES
 
 };
 
+enum
+{
+    SIGNAL_NONE,
+    SIGNAL_SEND
+};
+
+
+
 class MidiDeviceManager : public QWidget
 {
     Q_OBJECT
@@ -51,11 +59,14 @@ public:
     // product ID
     int PID;
     int initPID;
+    int PID_MIDI; // added for SoftStep to differentiate between rev1 and rev2
 
     // connection status based on if firmware matches. Firmware dialogs are handled before this is set true.
     bool connected;             // flag if device firmware matches and is connected
     bool port_in_open;          // flag if device input port is available and open
     bool port_out_open;         // flag if device output port is available and open
+
+    bool restart;               // flag to halt all actions and restart the app
 
     // RtMidi devices
     RtMidiIn *midi_in;
@@ -176,8 +187,8 @@ signals:
 public slots:
     bool slotOpenMidiIn();
     bool slotOpenMidiOut();
-    bool slotCloseMidiIn();
-    bool slotCloseMidiOut();
+    bool slotCloseMidiIn(bool);
+    bool slotCloseMidiOut(bool);
 
     void slotResetConnections(QString portNameApp, QString portNameBootloader);
 

@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>stylesheets/fwUpdateStyles_lightBlue.qss</file>
+        <file>stylesheets/fwUpdateStyles_red.qss</file>
+        <file>stylesheets/GrayButtonStyleSheet.qss</file>
+        <file>stylesheets/RedButtonStyleSheet.qss</file>
+    </qresource>
+</RCC>
