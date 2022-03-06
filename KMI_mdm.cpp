@@ -96,8 +96,8 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     versionReplyTimer.start();
 
     // timers have to be triggered by these signals from the main thread
-    connect(this, SIGNAL(signalStartPolling(QString)), this, SLOT(slotStartPolling(QString)));
-    connect(this, SIGNAL(signalStopPolling(QString)), this, SLOT(slotStopPolling(QString)));
+    //connect(this, SIGNAL(signalStartPolling(QString)), this, SLOT(slotStartPolling(QString)));
+    //connect(this, SIGNAL(signalStopPolling(QString)), this, SLOT(slotStopPolling(QString)));
     connect(this, SIGNAL(signalBeginBlTimer()), this, SLOT(slotBeginBlTimer()));
     connect(this, SIGNAL(signalBeginFwTimer()), this, SLOT(slotBeginFwTimer()));
     connect(this, SIGNAL(signalStopGlobalTimer()), this, SLOT(slotStopGlobalTimer()));
@@ -353,7 +353,8 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
     unsigned char numInPorts, numOutPorts;
 
     midi_in->cancelCallback();
-    emit signalStopPolling("slotResetConnections");
+    //emit signalStopPolling("slotResetConnections");
+    pollingStatus = false;
 
     DM_OUT << "Closing ports..." << lastPortName;
 
@@ -520,7 +521,11 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
     QThread::sleep(1);
     midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
 
-    if (initialBootloaderMode) slotStartPolling("slotResetConnections - bootloader->app successful"); // bootloader->app, begin polling
+    if (initialBootloaderMode)
+    {
+        //slotStartPolling("slotResetConnections - bootloader->app successful"); // bootloader->app, begin polling
+        pollingStatus = true;
+    }
 }
 
 // sends a sysex universal ack with magic number, if received then alert app
@@ -544,14 +549,19 @@ void MidiDeviceManager::slotStartPolling(QString caller)
 {
     DM_OUT << "slotStartPolling called - caller:" << caller << " pollingStatus:" << pollingStatus;
 
+    slotStopPolling("slotStartPolling clearing before enable");
+
     int pollTime;
 
     //versionPoller = new QTimer(this);
     connect(versionPoller, SIGNAL(timeout()), this, SLOT(slotPollVersion()));
 
     // some devices take longer to boot up
-    if (deviceName == "12 Step" ||
-        deviceName == "SSCOM")
+    if (deviceName == "12 Step")
+    {
+        pollTime = 4000;
+    }
+    else if (deviceName == "SSCOM")
     {
         pollTime = 2000;
     }
@@ -569,17 +579,16 @@ void MidiDeviceManager::slotStopPolling(QString caller) // this has to be called
 {
     DM_OUT << "slotStopPolling called - caller:" << caller;
     //versionPoller->stop();
-    disconnect(this, SLOT(slotPollVersion())); // disconnect all slots/signals for the timer
 
+    disconnect(this, SLOT(slotPollVersion())); // disconnect all slots/signals for the timer
     pollingStatus = false; // block polling
 }
 
 void MidiDeviceManager::slotPollVersion()
 {
-    //DM_OUT << "slotPollVersion called - pollingStatus: " << pollingStatus << " in_open: " << port_in_open << "in port#: " << port_in <<  " out_open: " << port_out_open << " port_out: " << port_out;
-
     if (pollingStatus == false) return; // avoid starting the timer multiple times
 
+    DM_OUT << "slotPollVersion called - pollingStatus: " << pollingStatus << " in_open: " << port_in_open << "in port#: " << port_in <<  " out_open: " << port_out_open << " port_out: " << port_out;
 
     // ports aren't setup yet
     if (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open)
@@ -593,7 +602,8 @@ void MidiDeviceManager::slotPollVersion()
             slotFirmwareUpdateReset();
             connected = false;
             emit signalFirmwareUpdateComplete(false);
-            emit signalStopPolling("slotPollVersion");
+            //emit signalStopPolling("slotPollVersion");
+            pollingStatus = false;
             return;
         }
         pollTimeout++;
@@ -616,7 +626,8 @@ void MidiDeviceManager::slotPollVersion()
 
     if (hackStopTimer)
     {
-        emit signalStopPolling("slotPollVersion - hackStopTimer");
+        //emit signalStopPolling("slotPollVersion - hackStopTimer");
+        pollingStatus = false;
         hackStopTimer = false;
         return;
     }
@@ -764,8 +775,23 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // ***** 12 Step ****************************************
     else if (replyIndex12S == 1)
     {
-        DM_OUT << "12Step fw reply - version: " << (uchar)sysExMessageCharArray->at(68);
-        deviceFirmwareVersion = sysExMessageByteArray.mid(68, 1);
+        // EB TODO: this is a temporary cluge to make the editor work with old, non-bootloader firmware. Remove when fw1.0.0 is out
+        bootloaderMode = false;
+
+        int fwVerWhole = (uchar)sysExMessageByteArray.at(68);
+
+        deviceFirmwareVersion.resize(3);
+        // no bootloader
+        deviceFirmwareVersion[2] = fwVerWhole % 10; // last digit
+        deviceFirmwareVersion[1] = (fwVerWhole - (uchar)deviceFirmwareVersion[2]) / 10; // second digit
+        deviceFirmwareVersion[0] = 0;
+
+        devicebootloaderVersion.resize(3);
+        devicebootloaderVersion[2] = 0;
+        devicebootloaderVersion[1] = 0;
+        devicebootloaderVersion[0] = 0;
+
+        DM_OUT << QString("12Step fw ver: %1.%2.%3").arg((uchar)deviceFirmwareVersion[0]).arg((uchar)deviceFirmwareVersion[1]).arg((uchar)deviceFirmwareVersion[2]);
     }
 
     // ***** QuNeo ****************************************
@@ -842,7 +868,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     versionReplyTimer.restart();
 
     // process firmware version connection messages
-    emit signalStopPolling("slotProcessSysEx");
+    //emit signalStopPolling("slotProcessSysEx");
+    pollingStatus = false;
 
     if (bootloaderMode)
     {
@@ -863,7 +890,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
         if (fwUpdateRequested) // wait for user to see update completed and click ok
         {
-            emit signalStopPolling("slotProcessSysEx - fw match");
+            //emit signalStopPolling("slotProcessSysEx - fw match");
+            pollingStatus = false;
             hackStopTimer = true;
             if (globalsRequested)
             {
@@ -943,7 +971,8 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
             {
                 DM_OUT << "Globals received, stop timer and enter bootloader";
                 emit signalStopGlobalTimer();
-                emit signalStopPolling("slotRequestFirmwareUpdate - globals received, enter bootloader");
+                //emit signalStopPolling("slotRequestFirmwareUpdate - globals received, enter bootloader");
+                pollingStatus = false;
 
                 emit signalFwConsoleMessage("\nGlobals Saved.");
                 emit signalFwProgress(25); // increment progress bar
@@ -1052,7 +1081,8 @@ void MidiDeviceManager::slotBootloaderTimeout()
     DM_OUT << "slotBootloaderTimeout called - bootloaderMode: " << bootloaderMode;
     if (bootloaderMode) return;
     emit signalFwConsoleMessage(QString("\nPinging %1 for bootloader status...\n").arg(deviceName));
-    emit signalStartPolling("slotBootloaderTimeout"); // begin polling
+    //emit signalStartPolling("slotBootloaderTimeout"); // begin polling
+    pollingStatus = true;
 }
 
 void MidiDeviceManager::slotUpdateFirmware()
@@ -1092,7 +1122,17 @@ void MidiDeviceManager::slotBeginFwTimer()
 {
     DM_OUT << "slotBeginFwTimer called";
 #ifndef Q_OS_WIN
-    QTimer::singleShot(15000, this, SLOT(slotFirmwareTimeout()));
+    int timeoutTime;
+
+    switch (PID)
+    {
+    case PID_12STEP: // need extra time for QuNeo
+        timeoutTime = 20000;
+        break;
+    default:
+        timeoutTime = 15000;
+    }
+    QTimer::singleShot(timeoutTime, this, SLOT(slotFirmwareTimeout()));
 #endif
 }
 
@@ -1104,7 +1144,10 @@ void MidiDeviceManager::slotFirmwareTimeout()
 
     emit signalFwProgress(75); // increment progress bar
     emit signalFwConsoleMessage("\nPinging Device for version info...\n");
-    emit signalStartPolling("slotFirmwareTimeout"); // begin polling
+
+    //emit signalStartPolling("slotFirmwareTimeout"); // begin polling
+    // EB TODO - verify that this change doesn't mess up QuNexus, QuNeo, Softstep etc
+    pollingStatus = true; // re-enable polling
 }
 
 void MidiDeviceManager::slotFirmwareUpdateReset()
@@ -1114,7 +1157,8 @@ void MidiDeviceManager::slotFirmwareUpdateReset()
     bootloaderMode = false;
     globalsRequested = false;
     hackStopTimer = false;
-    emit signalStopPolling("slotFirmwareUpdateReset");
+    //emit signalStopPolling("slotFirmwareUpdateReset");
+    pollingStatus = false;
 }
 
 
