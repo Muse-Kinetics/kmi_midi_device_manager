@@ -172,5 +172,7 @@
     #define SS_OUT_P2 "MIDIOUT2 (SoftStep)"
 #endif
 
+#define SS_HOSTED_PORT "SoftStep Share"
+
 
 #endif // KMI_DEV_DATA_H

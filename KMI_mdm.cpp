@@ -61,7 +61,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     lookupPID.insert(PID_BOPPAD, "BopPad");
     lookupPID.insert(PID_BOPPAD_BL, "BopPad Bootloader");
 
-    updatePID(initPID); // updates PID and deviceName
+    slotUpdatePID(initPID); // updates PID and deviceName
     objectName = objectNameInit; // unmodifiable
 
 #ifdef MDM_DEBUG_ENABLED
@@ -103,7 +103,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     connect(this, SIGNAL(signalStopGlobalTimer()), this, SLOT(slotStopGlobalTimer()));
 }
 
-void MidiDeviceManager::updatePID(int thisPID)
+void MidiDeviceManager::slotUpdatePID(int thisPID)
 {
     PID = thisPID;
     deviceName = lookupPID.value(PID);
@@ -114,7 +114,7 @@ void MidiDeviceManager::updatePID(int thisPID)
 // ****** Port slots/functions ******************************************************
 // **********************************************************************************
 
-bool MidiDeviceManager::updatePortIn(int port)
+bool MidiDeviceManager::slotUpdatePortIn(int port)
 {
     DM_OUT << "updatePortIn called";
     // update and try to re-open
@@ -130,7 +130,7 @@ bool MidiDeviceManager::updatePortIn(int port)
     return 0;
 }
 
-bool MidiDeviceManager::updatePortOut(int port)
+bool MidiDeviceManager::slotUpdatePortOut(int port)
 {
     DM_OUT << "updatePortOut called";
     // update and try to re-open
@@ -234,9 +234,16 @@ bool MidiDeviceManager::slotOpenMidiIn()
 
     if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
     {
+        DM_OUT << "Connected MIDI IN";
         connected = true;
         emit signalConnected(true);
     }
+#ifdef MDM_DEBUG_ENABLED
+    else
+    {
+        DM_OUT << "Could not connect MIDI IN - PID: " << PID << " connected: " << connected;
+    }
+#endif
     return 1;
 }
 
@@ -266,9 +273,16 @@ bool MidiDeviceManager::slotOpenMidiOut()
     }
     if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
     {
+        DM_OUT << "Connected MIDI Out";
         connected = true;
         emit signalConnected(true);
     }
+#ifdef MDM_DEBUG_ENABLED
+    else
+    {
+        DM_OUT << "Could not connect MIDI OUT - PID: " << PID << " connected: " << connected;
+    }
+#endif
     return 1;
 }
 
@@ -335,6 +349,65 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
     port_out_open = false;
     return 1;
 }
+
+// -----------------------------------------------------------
+// Virtual ports
+// -----------------------------------------------------------
+
+#ifndef Q_OS_WIN
+bool MidiDeviceManager::slotCreateVirtualIn(QString portName)
+{
+    DM_OUT << "slotCreateVirtualIn called";
+    try
+    {
+        // first close the port to avoid errors
+        if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
+
+        // create/open port
+        midi_in->openVirtualPort(portName.toStdString());
+
+        // setup callback
+        midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
+        callbackIsSet = true;
+
+        // Don't ignore sysex, timing, or active sensing messages.
+        midi_in->ignoreTypes( false, false, false );
+    }
+    catch (RtMidiError &error)
+    {
+        DM_OUT << "openVirtualInPort error:" << (QString::fromStdString(error.getMessage()));
+        return 0;
+    }
+    connected = true;
+    emit signalConnected(true);
+    return 1;
+}
+
+bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
+{
+    DM_OUT << "slotCreateVirtualOut called";
+    try
+    {
+        // first close the port to avoid errors
+        if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
+
+        // create/open ports
+        midi_out->openVirtualPort(portName.toStdString());
+    }
+    catch (RtMidiError &error)
+    {
+        DM_OUT << "openVirtualOutPort error:" << (QString::fromStdString(error.getMessage()));
+        return 0;
+    }
+    connected = true;
+    emit signalConnected(true);
+    return 1;
+}
+#endif
+
+// -----------------------------------------------------------
+// reset connections
+// -----------------------------------------------------------
 
 // reset connections is needed when the bootloader and app port names don't match
 void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNameBootloader)
@@ -464,7 +537,7 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         {
             DM_OUT << "app -> bootloader, thisPortName: " << thisPortName << " portNameBootloader: " << portNameBootloader;
 
-            if (thisPortName == "SoftStep Bootloader Port 1") updatePID(PID_SOFTSTEP); // hack for softstep
+            if (thisPortName == "SoftStep Bootloader Port 1") slotUpdatePID(PID_SOFTSTEP); // hack for softstep
 
             refreshDone = true;
         }
@@ -561,7 +634,7 @@ void MidiDeviceManager::slotStartPolling(QString caller)
     {
         pollTime = 4000;
     }
-    else if (deviceName == "SSCOM")
+    else if (deviceName == "SSCOM" || deviceName == "SoftStep")
     {
         pollTime = 2000;
     }
@@ -1183,7 +1256,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1, uchar d2)
 // Send a MIDI message. Handles 1/2/3 byte packets. Chan goes last to allow 2/3 byte system common messages to omit channel
 void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 255, uchar chan = 255)
 {
-    if (restart) return;
+    if (restart || !connected) return; // added connection check
 
     uchar newStatus = status + (chan < 16 ? chan : 0); // combine status byte with any valid channel data
 
@@ -1212,7 +1285,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     case MIDI_NOTE_AFTERTOUCH:
     case MIDI_CONTROL_CHANGE:
     case MIDI_PITCH_BEND:
-        if (chan > 127 || d1 > 127 || d2 > 127) return; // catch bad data
+        if ((chan != 255 && chan > 127) || d1 > 127 || d2 > 127) return; // catch bad data
         packet.push_back(newStatus);
         packet.push_back(d1);
         packet.push_back(d2);
@@ -1220,7 +1293,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     // two byte packets
     case MIDI_PROG_CHANGE:
     case MIDI_CHANNEL_PRESSURE:
-        if (chan > 127 || d1 > 127) return; // catch bad data
+        if ((chan != 255 && chan > 127) || d1 > 127) return; // catch bad data
         packet.push_back(newStatus);
         packet.push_back(d1);
         break;

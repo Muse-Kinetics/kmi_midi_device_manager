@@ -66,6 +66,8 @@ public:
     bool port_in_open;          // flag if device input port is available and open
     bool port_out_open;         // flag if device output port is available and open
 
+    int port_in, port_out;      // the current port in/out numbers
+
     bool restart;               // flag to halt all actions and restart the app
 
     // RtMidi devices
@@ -125,11 +127,6 @@ public:
 
 // public functions
 
-    void updatePID(int thisPID);
-
-    bool updatePortIn(int port);
-    bool updatePortOut(int port);
-
     QByteArray decode8BitArray(QByteArray this8BitArray);
 
 signals:
@@ -185,10 +182,19 @@ signals:
     void signalRxMidi_SysReset();
 
 public slots:
+
+    void slotUpdatePID(int thisPID);
+    bool slotUpdatePortIn(int port);
+    bool slotUpdatePortOut(int port);
     bool slotOpenMidiIn();
     bool slotOpenMidiOut();
     bool slotCloseMidiIn(bool);
     bool slotCloseMidiOut(bool);
+
+#ifndef Q_OS_WIN
+    bool slotCreateVirtualIn(QString portName);
+    bool slotCreateVirtualOut(QString portName);
+#endif
 
     void slotResetConnections(QString portNameApp, QString portNameBootloader);
 
@@ -230,7 +236,6 @@ public slots:
     void slotErrorPopup(QString errorMessage);
 
 private:
-    int port_in, port_out;
     bool callbackIsSet;
 
 };
