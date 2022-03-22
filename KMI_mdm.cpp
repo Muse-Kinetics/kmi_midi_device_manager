@@ -286,6 +286,11 @@ bool MidiDeviceManager::slotOpenMidiOut()
     return 1;
 }
 
+bool MidiDeviceManager::slotCloseMidiIn() // no argument, default doesn't send a disconnect signal
+{
+    return slotCloseMidiIn(SIGNAL_NONE);
+}
+
 bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most common usage
 {
     DM_OUT << "slotCloseMidiIn called, send disconnect signal: " << signal;
@@ -318,6 +323,12 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
     port_in_open = false;
     return 1;
 }
+
+bool MidiDeviceManager::slotCloseMidiOut() // no argument, default doesn't send a disconnect signal
+{
+    return slotCloseMidiOut(SIGNAL_NONE);
+}
+
 
 bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 {

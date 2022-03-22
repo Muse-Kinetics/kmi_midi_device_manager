@@ -188,7 +188,9 @@ public slots:
     bool slotUpdatePortOut(int port);
     bool slotOpenMidiIn();
     bool slotOpenMidiOut();
+    bool slotCloseMidiIn(); // alternate call
     bool slotCloseMidiIn(bool);
+    bool slotCloseMidiOut(); // alternate call
     bool slotCloseMidiOut(bool);
 
 #ifndef Q_OS_WIN
