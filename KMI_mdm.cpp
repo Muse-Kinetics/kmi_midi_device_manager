@@ -79,6 +79,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 
     // flags
     connected = false;
+    restart = false;
     port_in_open = false;
     port_out_open = false;
     callbackIsSet = false;
@@ -314,11 +315,15 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
         return 0;
     }
 
-    if (signal == SIGNAL_NONE) return 1; // don't alert the app to connection change
-
     // alert host application that we are disconnected
-    connected = false;
-    emit signalConnected(false);
+    // alert host application that we are disconnected
+    if (connected) // check so we only emit once
+    {
+        connected = false;
+    }
+
+    if (signal == SIGNAL_SEND) emit signalConnected(false);
+
     bootloaderMode = false;
     port_in_open = false;
     return 1;
@@ -348,13 +353,11 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
         return 0;
     }
 
-    if (signal == SIGNAL_NONE) return 1; // don't alert the app to connection change
-
     // alert host application that we are disconnected
     if (connected) // check so we only emit once
     {
         connected = false;
-        emit signalConnected(false);
+        if (signal == SIGNAL_SEND) emit signalConnected(false);
     }
     bootloaderMode = false;
     port_out_open = false;
@@ -919,9 +922,9 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
         devicebootloaderVersion = sysExMessageByteArray.mid(12, 3);
         deviceFirmwareVersion = sysExMessageByteArray.mid(15, 3);
-        PID_MIDI = sysExMessageByteArray.mid(8, 1).toInt(); // store the MIDI PID - added for SoftStep to differentiate version 1 vs 2
+        PID_MIDI = (uchar)sysExMessageCharArray->at(8); // store the MIDI PID - added for SoftStep to differentiate version 1 vs 2
 
-        DM_OUT << "ID Reply - BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion; // << " fullMsg: " << sysExMessageByteArray;
+        DM_OUT << "ID Reply - PID: " << PID_MIDI << " BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion; // << " fullMsg: " << sysExMessageByteArray;
     }
 
     // process non fw/id SysEx Messages
@@ -1267,6 +1270,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1, uchar d2)
 // Send a MIDI message. Handles 1/2/3 byte packets. Chan goes last to allow 2/3 byte system common messages to omit channel
 void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 255, uchar chan = 255)
 {
+    //DM_OUT << "slotSend MIDI - restart: " << restart << " connected: " << connected;
     if (restart || !connected) return; // added connection check
 
     uchar newStatus = status + (chan < 16 ? chan : 0); // combine status byte with any valid channel data
