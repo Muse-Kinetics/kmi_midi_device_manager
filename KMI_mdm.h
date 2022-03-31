@@ -119,11 +119,11 @@ public:
     QDialog* errDialog;
 
     //------ Rx MIDI Data Variables
-    uchar RPN_MSB[16];
-    uchar RPN_LSB[16];
-    uchar NRPN_MSB[16];
-    uchar NRPN_LSB[16];
-    uchar RPNorNRPN;
+    uchar RPN_MSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uchar RPN_LSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uchar NRPN_MSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uchar NRPN_LSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uchar RPNorNRPN = 0;
 
 // public functions
 

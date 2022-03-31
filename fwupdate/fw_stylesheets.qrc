@@ -4,5 +4,11 @@
         <file>stylesheets/fwUpdateStyles_red.qss</file>
         <file>stylesheets/GrayButtonStyleSheet.qss</file>
         <file>stylesheets/RedButtonStyleSheet.qss</file>
+        <file>stylesheets/GeneralStyles.qss</file>
+        <file>stylesheets/GeneralStylesWindows.qss</file>
+        <file>stylesheets/fwUpdateStyles_SoftStep.qss</file>
+        <file>stylesheets/fwUpdateStyles_SoftStep_WIN.qss</file>
+        <file>stylesheets/fwupdate.html</file>
+        <file>stylesheets/fwupdate_WIN.html</file>
     </qresource>
 </RCC>

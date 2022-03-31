@@ -59,6 +59,25 @@ fwUpdate::fwUpdate(QWidget *parent, QString initDeviceName, QString initAppFwVer
     connect (ui->butt_done, SIGNAL(clicked()), this, SLOT(close()));
     connect (ui->butt_ok, SIGNAL(clicked()), this, SLOT(slotRequestFwUpdate()));
     connect (ui->butt_retry, SIGNAL(clicked()), this, SLOT(slotRequestFwUpdate()));
+
+#ifdef Q_OS_WIN
+
+    QString fwUpdateHTMLFile = ":/stylesheets/fwupdate_WIN.html";
+    QFile fwUpdateHTML(fwUpdateHTMLFile);
+
+    if (fwUpdateHTML.open(QFile::ReadOnly))
+    {
+        QString fwUpdateString = QLatin1String(fwUpdateHTML.readAll());
+        ui->textBrowser->setHtml(fwUpdateString);
+    }
+    else
+    {
+        qDebug() << "ERROR - could not find fwUpdate HTML file: " << fwUpdateHTMLFile;
+    }
+
+    ui->textBrowser->setStyleSheet("background-color: black;color: white;");
+    ui->console->setStyleSheet("background-color: black;color: white; font: 9pt \"Arial\";");
+#endif
 }
 
 fwUpdate::~fwUpdate()

@@ -158,21 +158,13 @@
 
 // SOFTSTEP CURRENT
 
-#ifdef Q_OS_MAC
-    #define SS_BL_PORT "SoftStep Bootloader Port 1"
+    #define SS_BL_PORT "SoftStep Bootloader"
     #define SS_IN_P1 "SoftStep Control Surface"
     #define SS_IN_P2 "SoftStep Expander"
     #define SS_OUT_P1 "SoftStep Control Surface"
     #define SS_OUT_P2 "SoftStep Expander"
-#else
-    #define SS_BL_PORT "SoftStep Bootloader"
-    #define SS_IN_P1 "SoftStep"
-    #define SS_IN_P2 "MIDIIN2 (SoftStep)"
-    #define SS_OUT_P1 "SoftStep"
-    #define SS_OUT_P2 "MIDIOUT2 (SoftStep)"
-#endif
 
-#define SS_HOSTED_PORT "SoftStep Share"
+    #define SS_SHARE_PORT "SoftStep Share"
 
 
 #endif // KMI_DEV_DATA_H

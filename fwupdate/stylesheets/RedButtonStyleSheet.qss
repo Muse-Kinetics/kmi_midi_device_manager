@@ -1,12 +1,12 @@
 QPushButton {
         font-family: "Arial";
         font-size: 10px;
-        /* background-color: qlineargradient(spread:repeat, x1:1, y1:0, x2:1, y2:1, stop:0 rgba(162, 0, 0, 255), stop:1 rgba(90, 0, 0, 255)); */
-        background-color: rgba(162, 0, 0, 255);
+        background-color: qlineargradient(spread:repeat, x1:1, y1:0, x2:1, y2:1, stop:0 rgba(162, 0, 0, 255), stop:1 rgba(90, 0, 0, 255));
+        /*background-color: rgba(162, 0, 0, 255);*/
         border-style: outset;
         border-radius: 4.0;
         border-width: 1px;
-        border-color: rgba(0, 51, 76, 255);
+        border-color: rgba(0, 0, 0, 255);
         color: white;
 }
 

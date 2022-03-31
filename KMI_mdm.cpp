@@ -67,32 +67,61 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 #ifdef MDM_DEBUG_ENABLED
     DM_OUT << "MidiDeviceManager created - " << deviceName << " PID:" << PID;
 #endif
+
+    // initialize variables
+    PID_MIDI = 0;
+
     port_in = -1;
     port_out = -1;
 
-    // setup RtMidi connections
-    midi_in = new RtMidiIn();
-    midi_out = new RtMidiOut();
+    applicationFirmwareVersion.resize(3);
+    applicationFirmwareVersion[0] = 0;
+    applicationFirmwareVersion[1] = 0;
+    applicationFirmwareVersion[2] = 0;
 
-    // open gate
-    ioGate = true;
+    deviceFirmwareVersion.resize(3);
+    deviceFirmwareVersion[0] = 0;
+    deviceFirmwareVersion[1] = 0;
+    deviceFirmwareVersion[2] = 0;
+
+    devicebootloaderVersion.resize(3);
+    devicebootloaderVersion[0] = 0;
+    devicebootloaderVersion[1] = 0;
+    devicebootloaderVersion[2] = 0;
+
+    firmwareByteArray.resize(0);
+    bootloaderByteArray.resize(0);
+
+    globalsTimerCount = 0;
+    pollTimeout = 0;
+
 
     // flags
     connected = false;
     restart = false;
+    ioGate = true; // open gate
     port_in_open = false;
     port_out_open = false;
     callbackIsSet = false;
-    fwUpdateRequested = false;
+
     globalsRequested = false;
+    bootloaderMode = false;
+    fwUpdateRequested = false;
     hackStopTimer = false;
+    pollingStatus = false;
+
+
+
+    // setup RtMidi connections
+    midi_in = new RtMidiIn();
+    midi_out = new RtMidiOut();
 
     // firmware and bootloader timeout timer
     //timeoutFwBl = new QTimer(this);
 
     versionPoller = new QTimer(this);
 
-    versionPoller->start(1000); // start the timer
+    versionPoller->start(5000); // start the timer
 
     versionReplyTimer.start();
 
@@ -587,7 +616,9 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
     QMessageBox msgBox;
     if (initialBootloaderMode) // if we are going bootloader->app
     {
-        msgBox.setText("Firmware update sent.\n\nThe application must now re-start to refresh the MIDI driver.");
+        emit signalFwProgress(100);
+
+        msgBox.setText(QString("Firmware update sent.\n\nThe application must now re-start to refresh the MIDI driver and connect to the %1.").arg(deviceName));
     }
     else // app->bootloader
     {
@@ -650,7 +681,7 @@ void MidiDeviceManager::slotStartPolling(QString caller)
     }
     else if (deviceName == "SSCOM" || deviceName == "SoftStep")
     {
-        pollTime = 2000;
+        pollTime = 4000;
     }
     else
     {
@@ -840,40 +871,41 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // ***** Soft Step **************************************
     if (replyIndexSS == 2)
     {
+        pollingStatus = false; // turn off polling
+
         // this is the old softstep reply
         DM_OUT << "SoftStep fw reply:" <<  sysExMessageByteArray;
 
         int fwVerWhole = (uchar)sysExMessageByteArray.at(68);
 
-        deviceFirmwareVersion.resize(3);
         // no bootloader
         deviceFirmwareVersion[2] = fwVerWhole % 10; // last digit
         deviceFirmwareVersion[1] = (fwVerWhole - (uchar)deviceFirmwareVersion[2]) / 10; // second digit
         deviceFirmwareVersion[0] = 0;
 
-        devicebootloaderVersion.resize(3);
         devicebootloaderVersion[2] = 0;
         devicebootloaderVersion[1] = 0;
         devicebootloaderVersion[0] = 0;
 
         DM_OUT << QString("SoftStep fw ver: %1.%2.%3").arg((uchar)deviceFirmwareVersion[0]).arg((uchar)deviceFirmwareVersion[1]).arg((uchar)deviceFirmwareVersion[2]);
+        DM_OUT << QString("SoftStep bl ver: %1.%2.%3").arg((uchar)devicebootloaderVersion[0]).arg((uchar)devicebootloaderVersion[1]).arg((uchar)devicebootloaderVersion[2]);
     }
 
     // ***** 12 Step ****************************************
     else if (replyIndex12S == 1)
     {
+        pollingStatus = false; // turn off polling
+
         // EB TODO: this is a temporary cluge to make the editor work with old, non-bootloader firmware. Remove when fw1.0.0 is out
         bootloaderMode = false;
 
         int fwVerWhole = (uchar)sysExMessageByteArray.at(68);
 
-        deviceFirmwareVersion.resize(3);
         // no bootloader
         deviceFirmwareVersion[2] = fwVerWhole % 10; // last digit
         deviceFirmwareVersion[1] = (fwVerWhole - (uchar)deviceFirmwareVersion[2]) / 10; // second digit
         deviceFirmwareVersion[0] = 0;
 
-        devicebootloaderVersion.resize(3);
         devicebootloaderVersion[2] = 0;
         devicebootloaderVersion[1] = 0;
         devicebootloaderVersion[0] = 0;
@@ -884,6 +916,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // ***** QuNeo ****************************************
     else if (replyIndex == 0 && deviceName == "QuNeo")
     {
+        pollingStatus = false; // turn off polling
+
         if ((unsigned char)sysExMessageByteArray.at(9) == 1)
         {
             bootloaderMode = true;
@@ -911,6 +945,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // ***** All others *************************************
     else if (replyIndex == 0)
     {
+        pollingStatus = false; // turn off polling
+
         if ((unsigned char)sysExMessageByteArray.at(9) == 1)
         {
             bootloaderMode = true;
@@ -920,11 +956,17 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
             bootloaderMode = false;
         }
 
-        devicebootloaderVersion = sysExMessageByteArray.mid(12, 3);
-        deviceFirmwareVersion = sysExMessageByteArray.mid(15, 3);
+        devicebootloaderVersion[0] = sysExMessageByteArray[12];
+        devicebootloaderVersion[1] = sysExMessageByteArray[13];
+        devicebootloaderVersion[2] = sysExMessageByteArray[14];
+
+        deviceFirmwareVersion[0] = sysExMessageByteArray[15];
+        deviceFirmwareVersion[1] = sysExMessageByteArray[16];
+        deviceFirmwareVersion[2] = sysExMessageByteArray[17];
+
         PID_MIDI = (uchar)sysExMessageCharArray->at(8); // store the MIDI PID - added for SoftStep to differentiate version 1 vs 2
 
-        DM_OUT << "ID Reply - PID: " << PID_MIDI << " BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion; // << " fullMsg: " << sysExMessageByteArray;
+        DM_OUT << "ID Reply - PID_MIDI: " << PID_MIDI << " BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion; // << " fullMsg: " << sysExMessageByteArray;
     }
 
     // process non fw/id SysEx Messages
@@ -949,8 +991,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     }
 
 
-    // only allow 1 version response every second
-    if (!versionReplyTimer.hasExpired(1000)) return;
+    // only allow 1 version response every 5 seconds
+    if (!versionReplyTimer.hasExpired(5000)) return;
 
     versionReplyTimer.restart();
 
@@ -985,7 +1027,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
                 globalsRequested = false;
                 emit signalRestoreGlobals();
                 emit signalFwProgress(90); // increment progress bar
-                signalFwConsoleMessage("\nRestoring Globals...");
+                emit signalFwConsoleMessage("\nRestoring Globals...");
             }
             emit signalFirmwareUpdateComplete(true);
         }
@@ -1072,7 +1114,7 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
                 emit signalRequestGlobals();
                 slotStartGlobalsTimer(); // start the timer
                 emit signalFwProgress(10); // increment progress bar
-                signalFwConsoleMessage(QString("\nBacking up %1 global settings...").arg(deviceName));
+                emit signalFwConsoleMessage(QString("\nBacking up %1 global settings...").arg(deviceName));
             }
         }
         // handle devices that don't have anything to back up before fw update
@@ -1101,7 +1143,7 @@ void MidiDeviceManager::slotEnterBootloader()
             if (((uchar)deviceFirmwareVersion[0] == 9 && (uchar)deviceFirmwareVersion[1] < 8) ||
                  (uchar)deviceFirmwareVersion[0] < 9)
             {
-                signalFwConsoleMessage("\n*** Installing bootloader *** - device will reboot several times!\n");
+                emit signalFwConsoleMessage("\n*** Installing bootloader *** - device will reboot several times!\n");
 
                 // this will install the firmware and reboot the device into bootloader mode
                 slotSendSysExBA(bootloaderByteArray);
@@ -1132,7 +1174,7 @@ void MidiDeviceManager::slotEnterBootloader()
 #endif
     }
 
-    signalFwProgress(20); // increment progress bar
+    emit signalFwProgress(20); // increment progress bar
 
     DM_OUT << "BL timeout counter started";
     emit signalBeginBlTimer();

@@ -1,0 +1,104 @@
+QWidget
+{
+        background: rgba(35,31,32,255);
+        border: none;
+}
+
+/*---------- QPushButton ---------*/
+QPushButton
+{
+        border: 2px solid rgba(0,174,239,255);
+        font: 7pt "Futura-normal";
+        color: white;
+}
+
+QPushButton:pressed
+{
+        border: 2px solid white;
+        font: 7pt "Futura-normal";
+        background: rgba(0,174,239,255);
+        color: white;
+}
+
+
+/* ---------- QLabels ------------*/
+QLabel
+{
+        background:		rgba(0,0,0,0);
+        color: 				white;
+        font: 13px "Futura-normal";
+        border:				none;
+}
+
+QLabel:hover
+{
+        border:				none;
+}
+
+/* ---------- QSpinBox ------------*/
+QSpinBox
+{
+        font: 14px "Futura-normal";
+        border: 2px solid rgb(0,174,239);
+        background-color: rgba(0, 0, 0, 0);
+        color: white;
+        padding:0,0, 0, 0;
+}
+
+QAbstractSpinBox:focus
+{
+        border: 2px solid rgb(255,255,255);
+        outline: none;
+}
+
+QDoubleSpinBox
+{
+        font: 12px "Futura-normal";
+        border: 2px solid rgb(0,174,239);
+        background-color: rgba(0, 0, 0, 0);
+        color: white;
+        padding:0, 0, 0, 0;
+}
+
+/* ---------- QLineEdit ------------*/
+QLineEdit
+{
+        font: 8pt "Futura-normal";
+        background: rgba(0,174,239,0);
+        border: 2px solid rgba(0,174,239,255);
+        border-radius: 0px;
+        color: white;
+        padding-left: 0px;
+        padding-bottom: 0px;
+}
+
+QLineEdit:focus
+{
+        border: 2px solid rgb(255,255,255);
+        outline: none;
+}
+
+/* ---------- QtextEdit ------------*/
+
+QTextEdit {
+    background-color: rgba(0,0,0,255);
+    color: white;
+    font: 14px "Futura-normal";
+}
+
+QTextEdit QScrollBar {
+        subcontrol-position: bottom;
+        background:#222222;
+}
+QTextEdit QScrollBar::handle {
+    background: #444444;
+}
+
+/* ---------- QToolTip ------------*/
+
+QToolTip {
+    background: #006599;
+    color: black;
+}
+
+
