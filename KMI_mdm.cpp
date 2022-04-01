@@ -153,6 +153,7 @@ bool MidiDeviceManager::slotUpdatePortIn(int port)
     if (slotOpenMidiIn())
     {
         port_in_open = true;
+        portName_in = portNameFix(QString::fromStdString(midi_in->getPortName(port)));
         return 1;
     }
     port_in_open = false;
@@ -168,6 +169,7 @@ bool MidiDeviceManager::slotUpdatePortOut(int port)
     if (slotOpenMidiOut())
     {
         port_out_open = true;
+        portName_out = portNameFix(QString::fromStdString(midi_out->getPortName(port)));
         return 1;
     }
     port_out_open = false;

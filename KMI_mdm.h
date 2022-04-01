@@ -67,6 +67,7 @@ public:
     bool port_out_open;         // flag if device output port is available and open
 
     int port_in, port_out;      // the current port in/out numbers
+    QString portName_in, portName_out; // the port names of the in/out ports
 
     bool restart;               // flag to halt all actions and restart the app
 

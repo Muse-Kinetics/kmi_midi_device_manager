@@ -166,5 +166,15 @@
 
     #define SS_SHARE_PORT "SoftStep Share"
 
+// K-MIX
+    #define KMIX_IN_P1 "Audio Control"
+    #define KMIX_IN_P2 "Control Surface"
+    #define KMIX_IN_P3 "Expander"
+    #define KMIX_OUT_P1 "Audio Control"
+    #define KMIX_OUT_P2 "Control Surface"
+    #define KMIX_OUT_P3 "Expander"
+
+
+
 
 #endif // KMI_DEV_DATA_H
