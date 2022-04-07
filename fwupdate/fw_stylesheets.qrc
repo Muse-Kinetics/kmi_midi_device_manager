@@ -10,5 +10,7 @@
         <file>stylesheets/fwUpdateStyles_SoftStep_WIN.qss</file>
         <file>stylesheets/fwupdate.html</file>
         <file>stylesheets/fwupdate_WIN.html</file>
+        <file>stylesheets/appDialog_SoftStep_WIN.qss</file>
+        <file>stylesheets/appDialog_SoftStep.qss</file>
     </qresource>
 </RCC>

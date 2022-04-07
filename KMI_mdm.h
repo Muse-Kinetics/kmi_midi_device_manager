@@ -66,6 +66,8 @@ public:
     bool port_in_open;          // flag if device input port is available and open
     bool port_out_open;         // flag if device output port is available and open
 
+    bool firstFwResponseReceived; // make sure we catch the first response if device is connected when the app launches
+
     int port_in, port_out;      // the current port in/out numbers
     QString portName_in, portName_out; // the port names of the in/out ports
 

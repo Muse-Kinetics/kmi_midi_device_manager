@@ -75,8 +75,8 @@ fwUpdate::fwUpdate(QWidget *parent, QString initDeviceName, QString initAppFwVer
         qDebug() << "ERROR - could not find fwUpdate HTML file: " << fwUpdateHTMLFile;
     }
 
-    ui->textBrowser->setStyleSheet("background-color: black;color: white;");
-    ui->console->setStyleSheet("background-color: black;color: white; font: 9pt \"Arial\";");
+    //ui->textBrowser->setStyleSheet("background-color: black;color: white;");
+    //ui->console->setStyleSheet("background-color: black;color: white; font: 9pt \"Arial\";");
 #endif
 }
 

@@ -104,6 +104,8 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     port_out_open = false;
     callbackIsSet = false;
 
+    firstFwResponseReceived = false;
+
     globalsRequested = false;
     bootloaderMode = false;
     fwUpdateRequested = false;
@@ -113,8 +115,10 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 
 
     // setup RtMidi connections
-    midi_in = new RtMidiIn();
-    midi_out = new RtMidiOut();
+    //midi_in = new RtMidiIn();
+    //midi_out = new RtMidiOut();
+    midi_in = nullptr;
+    midi_out = nullptr;
 
     // firmware and bootloader timeout timer
     //timeoutFwBl = new QTimer(this);
@@ -152,11 +156,8 @@ bool MidiDeviceManager::slotUpdatePortIn(int port)
 
     if (slotOpenMidiIn())
     {
-        port_in_open = true;
-        portName_in = portNameFix(QString::fromStdString(midi_in->getPortName(port)));
         return 1;
     }
-    port_in_open = false;
     slotCloseMidiIn(SIGNAL_SEND); // close the port if we failed
     return 0;
 }
@@ -168,11 +169,8 @@ bool MidiDeviceManager::slotUpdatePortOut(int port)
     port_out = port;
     if (slotOpenMidiOut())
     {
-        port_out_open = true;
-        portName_out = portNameFix(QString::fromStdString(midi_out->getPortName(port)));
         return 1;
     }
-    port_out_open = false;
     slotCloseMidiOut(SIGNAL_SEND); // close the port if we failed
     return 0;
 }
@@ -241,10 +239,14 @@ bool MidiDeviceManager::slotOpenMidiIn()
         return 0;
     }
 
+    // first close the port to avoid errors
+    if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
+
+    midi_in = new RtMidiIn(); // refresh RtMidi
+
     try
     {
-        // first close the port to avoid errors
-        if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
+
         // setup RtMidi connections
 
         //open ports
@@ -261,8 +263,17 @@ bool MidiDeviceManager::slotOpenMidiIn()
     {
         /* Return the error */
         DM_OUT << "OPEN MIDI IN ERR:" << (QString::fromStdString(error.getMessage()));
+        port_in_open = false;
+        portName_in = "";
+        connected = false;
+        bootloaderMode = false;
+        delete midi_in;
+        midi_in = nullptr;
         return 0;
     }
+
+    portName_in = portNameFix(QString::fromStdString(midi_in->getPortName(port_in)));
+    port_in_open = true;
 
     if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
     {
@@ -289,11 +300,13 @@ bool MidiDeviceManager::slotOpenMidiOut()
         return 0;
     }
 
+    // first close the port to avoid errors
+    if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
+
+    midi_out = new RtMidiOut(); // refresh instance
+
     try
     {
-        // first close the port to avoid errors
-        if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
-
         //open ports
         midi_out->openPort(port_out);
     }
@@ -301,8 +314,17 @@ bool MidiDeviceManager::slotOpenMidiOut()
     {
         /* Return the error */
         DM_OUT << "OPEN MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
+        port_out_open = false;
+        portName_in = "";
+        connected = false;
+        bootloaderMode = false;
+        delete midi_out;
+        midi_out = nullptr;
         return 0;
     }
+    portName_out = portNameFix(QString::fromStdString(midi_out->getPortName(port_out)));
+    port_out_open = true;
+
     if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
     {
         DM_OUT << "Connected MIDI Out";
@@ -327,6 +349,27 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
 {
     DM_OUT << "slotCloseMidiIn called, send disconnect signal: " << signal;
 
+    // alert host application that we are disconnected
+    bootloaderMode = false;
+    port_in_open = false;
+    portName_in = "";
+
+    if (connected) // check so we only emit once
+    {
+        connected = false;
+        if (signal == SIGNAL_SEND) emit signalConnected(false);
+    }
+
+    if (midi_in != nullptr)
+    {
+        DM_OUT << "midi_in exists: " << midi_in;
+    }
+    else
+    {
+        DM_OUT << "WARNING: midi_in is not instantiated, assuming port is closed";
+        return 0; // handler doesn't exist
+    }
+
     try
     {
         //close ports
@@ -336,8 +379,9 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
             midi_in->cancelCallback();
             callbackIsSet = false;
         }
+        DM_OUT << "deleting midi_in";
         delete midi_in;
-        midi_in = new RtMidiIn(); // create new instance
+        midi_in = nullptr;
     }
     catch (RtMidiError &error)
     {
@@ -345,18 +389,6 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
         DM_OUT << "CLOSE MIDI IN ERR:" << (QString::fromStdString(error.getMessage()));
         return 0;
     }
-
-    // alert host application that we are disconnected
-    // alert host application that we are disconnected
-    if (connected) // check so we only emit once
-    {
-        connected = false;
-    }
-
-    if (signal == SIGNAL_SEND) emit signalConnected(false);
-
-    bootloaderMode = false;
-    port_in_open = false;
     return 1;
 }
 
@@ -370,19 +402,9 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 {
     DM_OUT << "slotCloseMidiOut called, send disconnect signal: " << signal;
 
-    try
-    {
-        //close ports
-        midi_out->closePort();
-        delete midi_out;
-        midi_out = new RtMidiOut(); // refresh instance
-    }
-    catch (RtMidiError &error)
-    {
-        /* Return the error */
-        DM_OUT << "CLOSE MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
-        return 0;
-    }
+    bootloaderMode = false;
+    port_out_open = false;
+    portName_out = "";
 
     // alert host application that we are disconnected
     if (connected) // check so we only emit once
@@ -390,8 +412,27 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
         connected = false;
         if (signal == SIGNAL_SEND) emit signalConnected(false);
     }
-    bootloaderMode = false;
-    port_out_open = false;
+
+    if (midi_out == nullptr)
+    {
+        DM_OUT << "WARNING: midi_out was not instantiated, assuming port is closed";
+        return 1; // handler doesn't exist
+    }
+
+    try
+    {
+        //close ports
+        midi_out->closePort();
+        DM_OUT << "deleting midi_out";
+        delete midi_out;
+        midi_out = nullptr;
+    }
+    catch (RtMidiError &error)
+    {
+        /* Return the error */
+        DM_OUT << "CLOSE MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
+        return 0;
+    }
     return 1;
 }
 
@@ -403,6 +444,12 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 bool MidiDeviceManager::slotCreateVirtualIn(QString portName)
 {
     DM_OUT << "slotCreateVirtualIn called";
+
+    // first close the port to avoid errors
+    if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
+
+    midi_in = new RtMidiIn(); // refresh RtMidi
+
     try
     {
         // first close the port to avoid errors
@@ -421,8 +468,17 @@ bool MidiDeviceManager::slotCreateVirtualIn(QString portName)
     catch (RtMidiError &error)
     {
         DM_OUT << "openVirtualInPort error:" << (QString::fromStdString(error.getMessage()));
+        port_in_open = false;
+        portName_in = "";
+        connected = false;
+        bootloaderMode = false;
+        delete midi_in;
+        midi_in = nullptr;
         return 0;
     }
+
+    portName_in = portName
+    port_in_open = true;
     connected = true;
     emit signalConnected(true);
     return 1;
@@ -431,6 +487,12 @@ bool MidiDeviceManager::slotCreateVirtualIn(QString portName)
 bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
 {
     DM_OUT << "slotCreateVirtualOut called";
+
+    // first close the port to avoid errors
+    if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
+
+    midi_out = new RtMidiOut(); // refresh instance
+
     try
     {
         // first close the port to avoid errors
@@ -442,8 +504,16 @@ bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
     catch (RtMidiError &error)
     {
         DM_OUT << "openVirtualOutPort error:" << (QString::fromStdString(error.getMessage()));
+        port_out_open = false;
+        portName_in = "";
+        connected = false;
+        bootloaderMode = false;
+        delete midi_out;
+        midi_out = nullptr;
         return 0;
     }
+    portName_out = portName;
+    port_out_open = true;
     connected = true;
     emit signalConnected(true);
     return 1;
@@ -470,8 +540,15 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 #endif
     unsigned char numInPorts, numOutPorts;
 
-    midi_in->cancelCallback();
-    //emit signalStopPolling("slotResetConnections");
+    if (midi_in != NULL)
+    {
+        midi_in->cancelCallback();
+    }
+    else
+    {
+        DM_OUT << "WARNING: midi_in does not exist, aborting cancel callback";
+    }
+
     pollingStatus = false;
 
     DM_OUT << "Closing ports..." << lastPortName;
@@ -480,9 +557,9 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
     midi_in->closePort();
     midi_out->closePort();
 
-    DM_OUT << "deleting ports...";
-    delete midi_out;
-    delete midi_in;
+//    DM_OUT << "deleting ports...";
+//    delete midi_out;
+//    delete midi_in;
 
     DM_OUT << "new rtmidi instances...";
     midi_in = new RtMidiIn(); // refresh instance
@@ -527,11 +604,8 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
                 QString newPortName;
                 try
                 {
-#ifdef Q_OS_WIN
                     newPortName = portNameFix(QString::fromStdString(midi_out->getPortName(thisPort)));
-#else
-                    newPortName = QString::fromStdString(midi_out->getPortName(thisPort));
-#endif
+
                     DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
                 }
                 catch (RtMidiError &error)
@@ -598,6 +672,10 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
                 DM_OUT << "Closing ports..." << thisPortName;
                 midi_in->closePort();
                 midi_out->closePort();
+
+                DM_OUT << "Re-creating midi_in and midi_out instances...";
+                midi_in = new RtMidiIn(); // refresh instance
+                midi_out = new RtMidiOut(); // refresh instance
             }
             catch (RtMidiError &error)
             {
@@ -710,6 +788,12 @@ void MidiDeviceManager::slotPollVersion()
 
     DM_OUT << "slotPollVersion called - pollingStatus: " << pollingStatus << " in_open: " << port_in_open << "in port#: " << port_in <<  " out_open: " << port_out_open << " port_out: " << port_out;
 
+    if (midi_in == nullptr)
+    {
+        DM_OUT << "ERROR: midi_in is not instantiated, aborting slotPollVersion!";
+        return; // handler doesn't exist
+    }
+
     // ports aren't setup yet
     if (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open)
     {
@@ -820,6 +904,12 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
     ioGate = false; // pause any midi output while sending SysEx
+
+    if (midi_out == nullptr)
+    {
+        DM_OUT << "ERROR: midi_out is not instantiated, aborting slotSendMIDI!";
+        return; // handler doesn't exist
+    }
 
     try
     {
@@ -994,8 +1084,9 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
 
     // only allow 1 version response every 5 seconds
-    if (!versionReplyTimer.hasExpired(5000)) return;
+    if (!versionReplyTimer.hasExpired(5000) && firstFwResponseReceived == true) return;
 
+    firstFwResponseReceived = true; // now we can use the timer
     versionReplyTimer.restart();
 
     // process firmware version connection messages
@@ -1208,7 +1299,6 @@ void MidiDeviceManager::slotBeginBlTimer()
 
 void MidiDeviceManager::slotBootloaderTimeout()
 {
-    //delete timeoutFwBl;
     DM_OUT << "slotBootloaderTimeout called - bootloaderMode: " << bootloaderMode;
     if (bootloaderMode) return;
     emit signalFwConsoleMessage(QString("\nPinging %1 for bootloader status...\n").arg(deviceName));
@@ -1269,7 +1359,6 @@ void MidiDeviceManager::slotBeginFwTimer()
 
 void MidiDeviceManager::slotFirmwareTimeout()
 {
-    //delete timeoutFwBl;
     DM_OUT << "slotFirmwareTimeout called - fwUpdateRequested: " << fwUpdateRequested;
     if (!fwUpdateRequested) return;
 
@@ -1401,8 +1490,13 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;
 #endif
 
+    if (midi_out == nullptr)
+    {
+        DM_OUT << "ERROR: midi_out is not instantiated, aborting slotSendMIDI!";
+        return; // handler doesn't exist
+    }
+
     // prepare and send the packet
-    //std::vector<unsigned char> message(packet, packet+len);
     try
     {
         midi_out->sendMessage( &packet );
