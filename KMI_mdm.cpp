@@ -527,6 +527,7 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
     DM_OUT << "slotResetConnections called - portName: " << portNameApp << " portNameBootloader: " << portNameBootloader << "bootloaderMode: " << bootloaderMode;
     bool refreshDone = false;
     bool initialBootloaderMode = bootloaderMode;
+    int cycleCount = 0;
 
     QString thisPortName;
 
@@ -558,19 +559,24 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
     midi_in = nullptr;
     midi_out = nullptr;
 
+    refreshTimer.restart();
+
     while (!refreshDone && !failFlag) // loop until the port changes
     {  
         // this is a hack for now, KMI_Ports should be reporting these changes, investigate this further
-        DM_OUT << "slotResetConnections - getPortCount";
+        DM_OUT << "\n";
+        DM_OUT << "#######################################################";
+        DM_OUT << "slotResetConnections - getPortCount - start refreshTimer";
+        DM_OUT << "#######################################################";
 
         if (midi_in == nullptr)
         {
-            DM_OUT << "new midi_in instance...";
+            //DM_OUT << "new midi_in instance...";
             midi_in = new RtMidiIn(); // refresh instance
         }
         if (midi_out == nullptr)
         {
-            DM_OUT << "new midi_in instance...";
+            //DM_OUT << "new midi_out instance...";
             midi_out = new RtMidiOut(); // refresh instance
         }
 
@@ -588,7 +594,7 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 
                     QString newPortName = kmiPorts->getInPortName(thisPort);
 
-                    DM_OUT << "find in port - thisPort: " << thisPort << " newPortName: " << newPortName;
+                    //DM_OUT << "find in port - thisPort: " << thisPort << " newPortName: " << newPortName;
 
                     // confirm we are either going bootLoader->app or app->bootLoader
                     if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
@@ -610,7 +616,7 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
                 {
                     QString newPortName = kmiPorts->getOutPortName(thisPort);
 
-                    DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
+                    //DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
 
                     // confirm we are either going bootLoader->app or app->bootLoader
                     if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
@@ -634,12 +640,12 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 
                 if (midi_in == nullptr)
                 {
-                    DM_OUT << "new midi_in instance...";
+                    //DM_OUT << "new midi_in instance...";
                     midi_in = new RtMidiIn(); // refresh instance
                 }
                 if (midi_out == nullptr)
                 {
-                    DM_OUT << "new midi_in instance...";
+                    //DM_OUT << "new midi_in instance...";
                     midi_out = new RtMidiOut(); // refresh instance
                 }
                 midi_in->openPort(port_in);
@@ -678,7 +684,11 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
                 if (midi_in != nullptr) midi_in->closePort();
                 if (midi_out != nullptr) midi_out->closePort();
 
-                DM_OUT << "deleting ports...";
+                DM_OUT << "deleting ports... ";
+                DM_OUT << "";
+                DM_OUT << "------------------------------------------------------";
+                DM_OUT << "cycleCount: " << ++cycleCount << " time elapsed: " << refreshTimer.elapsed();
+                DM_OUT << "------------------------------------------------------\n";
                 delete midi_out;
                 delete midi_in;
 
