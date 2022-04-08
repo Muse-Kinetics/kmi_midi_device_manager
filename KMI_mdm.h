@@ -22,6 +22,7 @@
 #include <QElapsedTimer>
 
 #include "RtMidi.h"
+#include "kmi_ports.h"
 
 enum
 {
@@ -51,7 +52,7 @@ class MidiDeviceManager : public QWidget
 {
     Q_OBJECT
 public:
-    explicit MidiDeviceManager(QWidget *parent = nullptr, int initPID = -1, QString objectNameInit = "undefined");
+    explicit MidiDeviceManager(QWidget *parent = nullptr, int initPID = -1, QString objectNameInit = "undefined", KMI_Ports *kmiP = NULL);
 
     // from device
     static void midiInCallback ( double deltatime, std::vector< unsigned char > *message, void *userData );
@@ -72,10 +73,14 @@ public:
     QString portName_in, portName_out; // the port names of the in/out ports
 
     bool restart;               // flag to halt all actions and restart the app
+    bool failFlag;              // used to abort processes like slotResetConnections
 
     // RtMidi devices
     RtMidiIn *midi_in;
     RtMidiOut *midi_out;
+
+    // KMI_Ports pointer
+    KMI_Ports *kmiPorts;
 
     // the name of the device detected by the PID
     QString deviceName;
@@ -111,6 +116,7 @@ public:
     QTimer* timeoutGlobalsReq;
 
     QElapsedTimer versionReplyTimer;
+    QElapsedTimer refreshTimer;
 
     // counters to timeout timers
     unsigned char pollTimeout;

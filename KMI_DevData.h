@@ -158,11 +158,8 @@
 
 // SOFTSTEP CURRENT
 
-#ifdef Q_OS_WIN
     #define SS_BL_PORT "SoftStep Bootloader"
-#else
-    #define SS_BL_PORT "SoftStep Bootloader Port 1"
-#endif
+
     #define SS_IN_P1 "SoftStep Control Surface"
     #define SS_IN_P2 "SoftStep Expander"
     #define SS_OUT_P1 "SoftStep Control Surface"

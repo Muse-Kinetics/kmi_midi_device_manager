@@ -28,7 +28,6 @@
 #include "KMI_mdm.h"
 #include "KMI_DevData.h"
 #include "KMI_SysexMessages.h"
-#include "kmi_ports.h"
 #include <QMessageBox>
 
 //#define MDM_DEBUG_ENABLED 1
@@ -37,9 +36,11 @@
 #define DM_OUT qDebug() << objectName << ": "
 #define DM_OUT_P qDebug() << thisMidiDeviceManager->objectName << ": "
 
-MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objectNameInit) :
+MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objectNameInit, KMI_Ports *kmiP) :
     QWidget(parent)
 {
+    kmiPorts = kmiP; // store this now
+
     // putting these here for now but ideally this should be in a common database/table    
     lookupPID.insert(PID_AUX, "AUX");
     lookupPID.insert(PID_STRINGPORT, "StringPort");
@@ -111,6 +112,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     fwUpdateRequested = false;
     hackStopTimer = false;
     pollingStatus = false;
+    failFlag = false;
 
 
 
@@ -128,6 +130,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     versionPoller->start(5000); // start the timer
 
     versionReplyTimer.start();
+    refreshTimer.start();
 
     // timers have to be triggered by these signals from the main thread
     //connect(this, SIGNAL(signalStartPolling(QString)), this, SLOT(slotStartPolling(QString)));
@@ -272,7 +275,7 @@ bool MidiDeviceManager::slotOpenMidiIn()
         return 0;
     }
 
-    portName_in = portNameFix(QString::fromStdString(midi_in->getPortName(port_in)));
+    portName_in = kmiPorts->getInPortName(port_in);
     port_in_open = true;
 
     if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
@@ -322,7 +325,7 @@ bool MidiDeviceManager::slotOpenMidiOut()
         midi_out = nullptr;
         return 0;
     }
-    portName_out = portNameFix(QString::fromStdString(midi_out->getPortName(port_out)));
+    portName_out = kmiPorts->getOutPortName(port_out);
     port_out_open = true;
 
     if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
@@ -527,14 +530,11 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 
     QString thisPortName;
 
-#ifdef Q_OS_WIN
-    QString lastPortName = portNameFix(QString::fromStdString(midi_in->getPortName(port_in)));
-#else
-    QString lastPortName = QString::fromStdString(midi_in->getPortName(port_in));
-#endif
+    QString lastPortName = kmiPorts->getInPortName(port_in);
+
     unsigned char numInPorts, numOutPorts;
 
-    if (midi_in != NULL)
+    if (midi_in != nullptr)
     {
         midi_in->cancelCallback();
     }
@@ -547,126 +547,157 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 
     DM_OUT << "Closing ports..." << lastPortName;
 
-    //close ports
-    midi_in->closePort();
-    midi_out->closePort();
+    if (midi_in != nullptr) midi_in->closePort();
+    if (midi_out != nullptr) midi_out->closePort();
 
-//    DM_OUT << "deleting ports...";
-//    delete midi_out;
-//    delete midi_in;
+    DM_OUT << "deleting ports...";
+    delete midi_out;
+    delete midi_in;
 
-    DM_OUT << "new rtmidi instances...";
-    midi_in = new RtMidiIn(); // refresh instance
-    midi_out = new RtMidiOut(); // refresh instance
+    // safety for other threads to chck
+    midi_in = nullptr;
+    midi_out = nullptr;
 
-    while (!refreshDone) // loop until the port changes
+    while (!refreshDone && !failFlag) // loop until the port changes
     {  
         // this is a hack for now, KMI_Ports should be reporting these changes, investigate this further
         DM_OUT << "slotResetConnections - getPortCount";
-        numInPorts = midi_in->getPortCount();
-        numOutPorts = midi_out->getPortCount();
 
-        // test/fix input port name
-        for (uint thisPort = 0; thisPort < (numInPorts); thisPort++)
+        if (midi_in == nullptr)
         {
-            if (thisPort <= numInPorts)
-            {  
+            DM_OUT << "new midi_in instance...";
+            midi_in = new RtMidiIn(); // refresh instance
+        }
+        if (midi_out == nullptr)
+        {
+            DM_OUT << "new midi_in instance...";
+            midi_out = new RtMidiOut(); // refresh instance
+        }
 
-                QString newPortName = portNameFix(QString::fromStdString(midi_in->getPortName(thisPort)));
+        numInPorts = kmiPorts->IN_PORT_MGR->getPortCount();
+        numOutPorts = kmiPorts->OUT_PORT_MGR->getPortCount();
 
-                DM_OUT << "find in port - thisPort: " << thisPort << " newPortName: " << newPortName;
-
-                // confirm we are either going bootLoader->app or app->bootLoader
-                if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
+        // we need both an in and an out port to continue
+        if (numInPorts + numOutPorts > 1)
+        {
+            // test/fix input port name
+            for (uint thisPort = 0; thisPort < (numInPorts); thisPort++)
+            {
+                if (thisPort <= numInPorts)
                 {
-                    DM_OUT << "Input port match - initialBootloaderMode: " << initialBootloaderMode << " newPortName: " << newPortName;
-                    port_in = thisPort;
+
+                    QString newPortName = kmiPorts->getInPortName(thisPort);
+
+                    DM_OUT << "find in port - thisPort: " << thisPort << " newPortName: " << newPortName;
+
+                    // confirm we are either going bootLoader->app or app->bootLoader
+                    if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
+                    {
+                        DM_OUT << "Input port match - initialBootloaderMode: " << initialBootloaderMode << " newPortName: " << newPortName;
+                        port_in = thisPort;
+                    }
+                }
+                else
+                {
+                    DM_OUT << "Port subtraction before end of for loop, numInPorts: " << numInPorts << " thisPort: " << thisPort;
                 }
             }
-            else
+
+            // test/fix output port name
+            for (uint thisPort = 0; thisPort < (numOutPorts); thisPort++)
             {
-                DM_OUT << "Port subtraction before end of for loop, numInPorts: " << numInPorts << " thisPort: " << thisPort;
-            }
-        }
-
-        // test/fix output port name
-        for (uint thisPort = 0; thisPort < (numOutPorts); thisPort++)
-        {
-            if (thisPort <= numOutPorts)
-            {
-                QString newPortName = portNameFix(QString::fromStdString(midi_out->getPortName(thisPort)));
-
-                DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
-
-                // confirm we are either going bootLoader->app or app->bootLoader
-                if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
+                if (thisPort <= numOutPorts)
                 {
-                    DM_OUT << "Output port match - initialBootloaderMode: " << initialBootloaderMode << " newPortName: " << newPortName;
-                    port_out = thisPort;
+                    QString newPortName = kmiPorts->getOutPortName(thisPort);
+
+                    DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
+
+                    // confirm we are either going bootLoader->app or app->bootLoader
+                    if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
+                    {
+                        DM_OUT << "Output port match - initialBootloaderMode: " << initialBootloaderMode << " newPortName: " << newPortName;
+                        port_out = thisPort;
+                    }
+                }
+                else
+                {
+                    DM_OUT << "Port subtraction before end of for loop, numOutPorts: " << numOutPorts << " thisPort: " << thisPort;
                 }
             }
-            else
-            {
-                DM_OUT << "Port subtraction before end of for loop, numOutPorts: " << numOutPorts << " thisPort: " << thisPort;
-            }
-        }
 
-        // attempting to open the ports when we are in between app and bootloader modes helps to flush out the old port settings
-        try
-        {
-            thisPortName = portNameFix(QString::fromStdString(midi_in->getPortName(port_in)));
-
-            DM_OUT << "Opening ports..." << thisPortName;
-
-            midi_in->openPort(port_in);
-            midi_out->openPort(port_out);
-        }
-        catch (RtMidiError &error)
-        {
-            /* Return the error */
-            thisPortName = ""; // prevents refreshDone being set to true in next if statement
-            DM_OUT << "Port #" << port_in << " not found, retrying. Error Message: " << QString::fromStdString(error.getMessage());
-
-        }
-
-        // *****************************************
-        // validate if the ports have been refreshed
-        // *****************************************
-        if (!initialBootloaderMode && thisPortName == portNameBootloader) // test for app->bootloader
-        {
-            DM_OUT << "app -> bootloader, thisPortName: " << thisPortName << " portNameBootloader: " << portNameBootloader;
-
-            if (thisPortName == "SoftStep Bootloader Port 1") slotUpdatePID(PID_SOFTSTEP); // hack for softstep
-
-            refreshDone = true;
-        }
-        else if (initialBootloaderMode && thisPortName == portNameApp) // test if bootloader->app
-        {   
-            DM_OUT << "bootloader -> app, ports match - thisPortName: " << thisPortName << " portNameApp: " << portNameApp;
-            refreshDone = true;
-        }
-        else // we are about to loop back - close the ports, which is necessary to flush out the old settings
-        {
+            // attempting to open the ports when we are in between app and bootloader modes helps to flush out the old port settings
             try
             {
-                DM_OUT << "No port match - initialBootloaderMode: " << initialBootloaderMode << " thisPortName: " << thisPortName;
+                thisPortName = kmiPorts->getInPortName(port_in);
 
-                DM_OUT << "Closing ports..." << thisPortName;
-                midi_in->closePort();
-                midi_out->closePort();
+                DM_OUT << "Opening ports..." << thisPortName << " port_in: " << port_in << " port_out" << port_out;
 
-                DM_OUT << "Re-creating midi_in and midi_out instances...";
-                midi_in = new RtMidiIn(); // refresh instance
-                midi_out = new RtMidiOut(); // refresh instance
+                if (midi_in == nullptr)
+                {
+                    DM_OUT << "new midi_in instance...";
+                    midi_in = new RtMidiIn(); // refresh instance
+                }
+                if (midi_out == nullptr)
+                {
+                    DM_OUT << "new midi_in instance...";
+                    midi_out = new RtMidiOut(); // refresh instance
+                }
+                midi_in->openPort(port_in);
+                midi_out->openPort(port_out);
             }
             catch (RtMidiError &error)
             {
                 /* Return the error */
-                DM_OUT << "Port still not found, retrying. Error Message: " << QString::fromStdString(error.getMessage());
+                thisPortName = ""; // prevents refreshDone being set to true in next if statement
+                DM_OUT << "Port #" << port_in << " not found, retrying. Error Message: " << QString::fromStdString(error.getMessage());
+
+            }
+
+            // *****************************************
+            // validate if the ports have been refreshed
+            // *****************************************
+            if (!initialBootloaderMode && thisPortName == portNameBootloader) // test for app->bootloader
+            {
+                DM_OUT << "app -> bootloader, thisPortName: " << thisPortName << " portNameBootloader: " << portNameBootloader;
+
+                if (thisPortName == SS_BL_PORT) slotUpdatePID(PID_SOFTSTEP); // hack for softstep
+
+                refreshDone = true;
+            }
+            else if (initialBootloaderMode && thisPortName == portNameApp) // test if bootloader->app
+            {
+                DM_OUT << "bootloader -> app, ports match - thisPortName: " << thisPortName << " portNameApp: " << portNameApp;
+                refreshDone = true;
+            }
+            else // we are about to loop back - close the ports, which is necessary to flush out the old settings
+            {
+
+                DM_OUT << "No port match - initialBootloaderMode: " << initialBootloaderMode << " thisPortName: " << thisPortName;
+
+                DM_OUT << "Closing ports..." << thisPortName;
+                if (midi_in != nullptr) midi_in->closePort();
+                if (midi_out != nullptr) midi_out->closePort();
+
+                DM_OUT << "deleting ports...";
+                delete midi_out;
+                delete midi_in;
+
+                midi_in = nullptr;
+                midi_out = nullptr;
             }
         }
 
-        QThread::sleep(1);
+        refreshTimer.restart();
+        int lastTick = 0;
+
+        while(refreshTimer.elapsed() < 1000)
+        {
+            if (refreshTimer.elapsed() > (lastTick + 100))
+            {
+                lastTick = refreshTimer.elapsed();
+                //DM_OUT << "Elapsed: " << lastTick;
+            }
+        }
     }
 
 // brute force, but necessary to reset the ports
@@ -697,9 +728,17 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
     DM_OUT << "slotResetConnections set callback";
     midi_in->ignoreTypes( false, false, false );
 
-    midi_in->cancelCallback();
-    QThread::sleep(1);
-    midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
+//    midi_in->cancelCallback();
+//    QThread::sleep(1);
+    try
+    {
+        midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
+    }
+    catch (RtMidiError &error)
+    {
+        /* Return the error */
+        DM_OUT << "Error setting callback - Message: " << QString::fromStdString(error.getMessage());
+    }
 
     if (initialBootloaderMode)
     {
@@ -788,6 +827,7 @@ void MidiDeviceManager::slotPollVersion()
             slotFirmwareUpdateReset();
             connected = false;
             emit signalFirmwareUpdateComplete(false);
+            failFlag = true;
             //emit signalStopPolling("slotPollVersion");
             pollingStatus = false;
             return;
@@ -862,6 +902,7 @@ void MidiDeviceManager::slotCheckGlobalsReceived()
         slotFirmwareUpdateReset(); // reset flags
         emit signalFwConsoleMessage("\nERROR: No response to Globals request.");
         emit signalFirmwareUpdateComplete(false); // signal failure
+        failFlag = true;
     }
 }
 
@@ -1160,6 +1201,7 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
 {
     DM_OUT << "slotRequestFirmwareUpdate - fwUpdteRequested: " << fwUpdateRequested << " bootloaderMode: " << bootloaderMode << " globalsRequested: " << globalsRequested;
     fwUpdateRequested = true;
+    failFlag = false;
 
     if (bootloaderMode)
     {
