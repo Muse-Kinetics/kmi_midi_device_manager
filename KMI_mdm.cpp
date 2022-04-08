@@ -362,7 +362,7 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
 
     if (midi_in != nullptr)
     {
-        DM_OUT << "midi_in exists: " << midi_in;
+        //DM_OUT << "midi_in exists: " << midi_in;
     }
     else
     {
@@ -445,15 +445,12 @@ bool MidiDeviceManager::slotCreateVirtualIn(QString portName)
 {
     DM_OUT << "slotCreateVirtualIn called";
 
-    // first close the port to avoid errors
-    if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
-
-    midi_in = new RtMidiIn(); // refresh RtMidi
-
     try
     {
         // first close the port to avoid errors
         if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
+
+        midi_in = new RtMidiIn(); // refresh RtMidi
 
         // create/open port
         midi_in->openVirtualPort(portName.toStdString());
@@ -477,7 +474,7 @@ bool MidiDeviceManager::slotCreateVirtualIn(QString portName)
         return 0;
     }
 
-    portName_in = portName
+    portName_in = portName;
     port_in_open = true;
     connected = true;
     emit signalConnected(true);
@@ -488,15 +485,12 @@ bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
 {
     DM_OUT << "slotCreateVirtualOut called";
 
-    // first close the port to avoid errors
-    if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
-
-    midi_out = new RtMidiOut(); // refresh instance
-
     try
     {
         // first close the port to avoid errors
         if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
+
+        midi_out = new RtMidiOut(); // refresh instance
 
         // create/open ports
         midi_out->openVirtualPort(portName.toStdString());
@@ -577,16 +571,15 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         {
             if (thisPort <= numInPorts)
             {  
-#ifdef Q_OS_WIN
+
                 QString newPortName = portNameFix(QString::fromStdString(midi_in->getPortName(thisPort)));
-#else
-                QString newPortName = QString::fromStdString(midi_in->getPortName(thisPort));
-#endif
+
                 DM_OUT << "find in port - thisPort: " << thisPort << " newPortName: " << newPortName;
 
                 // confirm we are either going bootLoader->app or app->bootLoader
                 if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
                 {
+                    DM_OUT << "Input port match - initialBootloaderMode: " << initialBootloaderMode << " newPortName: " << newPortName;
                     port_in = thisPort;
                 }
             }
@@ -601,24 +594,14 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         {
             if (thisPort <= numOutPorts)
             {
-                QString newPortName;
-                try
-                {
-                    newPortName = portNameFix(QString::fromStdString(midi_out->getPortName(thisPort)));
+                QString newPortName = portNameFix(QString::fromStdString(midi_out->getPortName(thisPort)));
 
-                    DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
-                }
-                catch (RtMidiError &error)
-                {
-                    /* Return the error */
-                    newPortName = ""; // not detected
-                    DM_OUT << "Port #" << port_in << " not found, retrying. Error Message: " << QString::fromStdString(error.getMessage());
-
-                }
+                DM_OUT << "find out port - thisPort: " << thisPort << " newPortName: " << newPortName;
 
                 // confirm we are either going bootLoader->app or app->bootLoader
                 if ((initialBootloaderMode && newPortName == portNameApp) || (!initialBootloaderMode && newPortName == portNameBootloader))
                 {
+                    DM_OUT << "Output port match - initialBootloaderMode: " << initialBootloaderMode << " newPortName: " << newPortName;
                     port_out = thisPort;
                 }
             }
@@ -631,11 +614,8 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         // attempting to open the ports when we are in between app and bootloader modes helps to flush out the old port settings
         try
         {
-#ifdef Q_OS_WIN
             thisPortName = portNameFix(QString::fromStdString(midi_in->getPortName(port_in)));
-#else
-            thisPortName = QString::fromStdString(midi_in->getPortName(port_in));
-#endif
+
             DM_OUT << "Opening ports..." << thisPortName;
 
             midi_in->openPort(port_in);
@@ -669,6 +649,8 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
         {
             try
             {
+                DM_OUT << "No port match - initialBootloaderMode: " << initialBootloaderMode << " thisPortName: " << thisPortName;
+
                 DM_OUT << "Closing ports..." << thisPortName;
                 midi_in->closePort();
                 midi_out->closePort();
