@@ -46,7 +46,21 @@ enum
     SIGNAL_SEND
 };
 
-
+// enumerate the states of the firmware update process, not all apply to every product
+enum
+{
+    FWUD_STATE_IDLE,
+    FWUD_STATE_BEGIN,
+    FWUD_STATE_GLOBALS_REQ_SEND,
+    FWUD_STATE_GLOBALS_WAIT_RCV,
+    FWUD_STATE_BL_SEND,
+    FWUD_STATE_BL_SENT_WAIT,
+    FWUD_STATE_FW_SEND,
+    FWUD_STATE_FW_SENT_WAIT,
+    FWUD_STATE_GLOBALS_SEND,
+    FWUD_STATE_SUCCESS,
+    FWUD_STATE_FAIL
+};
 
 class MidiDeviceManager : public QWidget
 {
@@ -111,12 +125,17 @@ public:
     bool hackStopTimer;
     bool pollingStatus;
 
+    int firmwareUpdateState;
+    QElapsedTimer firmwareUpdateStateTimer;
+
     QTimer* versionPoller;
     QTimer* timeoutFwBl;
     QTimer* timeoutGlobalsReq;
 
+
     QElapsedTimer versionReplyTimer;
     QElapsedTimer refreshTimer;
+    QElapsedTimer delayFwTimer;
 
     // counters to timeout timers
     unsigned char pollTimeout;
@@ -230,7 +249,7 @@ public slots:
     void slotEnterBootloader();
     void slotBeginBlTimer();
     void slotBootloaderTimeout();
-    void slotUpdateFirmware();
+    void slotSendFirmware();
     void slotBeginFwTimer();
     void slotFirmwareTimeout();
     void slotFirmwareUpdateReset();

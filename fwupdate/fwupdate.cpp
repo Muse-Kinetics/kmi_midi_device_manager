@@ -49,16 +49,16 @@ fwUpdate::fwUpdate(QWidget *parent, QString initDeviceName, QString initAppFwVer
     ui->butt_ok->setStyleSheet(blueStyleString);
     ui->butt_ok->setAutoDefault(false);
 
-    ui->butt_retry->hide();
-    ui->butt_retry->setStyleSheet(blueStyleString);
-    ui->butt_retry->setAutoDefault(false);
+    //ui->butt_retry->hide();
+    //ui->butt_retry->setStyleSheet(blueStyleString);
+    //ui->butt_retry->setAutoDefault(false);
 
     this->setWindowTitle(deviceName);
 
     connect (ui->butt_cancel, SIGNAL(clicked()), this, SLOT(close()));
     connect (ui->butt_done, SIGNAL(clicked()), this, SLOT(close()));
     connect (ui->butt_ok, SIGNAL(clicked()), this, SLOT(slotRequestFwUpdate()));
-    connect (ui->butt_retry, SIGNAL(clicked()), this, SLOT(slotRequestFwUpdate()));
+    //connect (ui->butt_retry, SIGNAL(clicked()), this, SLOT(slotRequestFwUpdate()));
 
 #ifdef Q_OS_WIN
 
@@ -117,10 +117,10 @@ void fwUpdate::slotClearText()
 void fwUpdate::slotFwUpdateTimeout()
 {
     ui->interrupt_warning->hide();
-    ui->butt_done->setGeometry(FW_BUTT_COL1, FW_BUTT_ROW1, FW_BUTT_WIDTH, FW_BUTT_HEIGHT); // move "done" button to the left
+    //ui->butt_done->setGeometry(FW_BUTT_COL1, FW_BUTT_ROW1, FW_BUTT_WIDTH, FW_BUTT_HEIGHT); // move "done" button to the left
     ui->butt_done->setText("Abort"); // change text but for now keep as a "successful" exit, which should re-send connection checks
     ui->butt_done->show();
-    ui->butt_retry->show();
+    //ui->butt_retry->show();
 
 }
 
@@ -136,10 +136,10 @@ void fwUpdate::slotFwUpdateComplete(bool success)
         slotAppendTextToConsole("\nFirmware successfully updated to " + appFwVer.right(fwLength) + "\n");
         ui->interrupt_warning->hide();
 
-        ui->butt_retry->hide();
+        //ui->butt_retry->hide();
 
         ui->butt_done->setText("Done"); // change text but for now keep as a "successful" exit, which should re-send connection checks
-        ui->butt_done->setGeometry(FW_WIN_X_CENTER - FW_BUTT_X_CENTER, FW_BUTT_ROW1, FW_BUTT_WIDTH, FW_BUTT_HEIGHT); // move "done" button to the left
+        //ui->butt_done->setGeometry(FW_WIN_X_CENTER - FW_BUTT_X_CENTER, FW_BUTT_ROW1, FW_BUTT_WIDTH, FW_BUTT_HEIGHT); // move "done" button to the left
         ui->butt_done->show();
 
         emit signalFwUpdateSuccess();
@@ -171,11 +171,11 @@ void fwUpdate::closeEvent(QCloseEvent *event)
         emit signalFwUpdateSuccessCloseDialog(false);
 
         // restore window
-        ui->butt_retry->hide();
+        //ui->butt_retry->hide();
         ui->butt_done->hide();
 
         ui->butt_done->setText("Done"); // change text but for now keep as a "successful" exit, which should re-send connection checks
-        ui->butt_done->setGeometry(FW_BUTT_COL1, FW_BUTT_ROW1, FW_BUTT_WIDTH, FW_BUTT_HEIGHT); // move "done" button to the left
+        //ui->butt_done->setGeometry(FW_BUTT_COL1, FW_BUTT_ROW1, FW_BUTT_WIDTH, FW_BUTT_HEIGHT); // move "done" button to the middle
 
         ui->interrupt_warning->show();
         ui->stack->setCurrentIndex(0);

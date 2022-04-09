@@ -218,7 +218,7 @@ p, li { white-space: pre-wrap; }
     <widget class="QPushButton" name="butt_done">
      <property name="geometry">
       <rect>
-       <x>162</x>
+       <x>210</x>
        <y>310</y>
        <width>80</width>
        <height>24</height>
@@ -245,19 +245,6 @@ p, li { white-space: pre-wrap; }
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="butt_retry">
-     <property name="geometry">
-      <rect>
-       <x>258</x>
-       <y>310</y>
-       <width>80</width>
-       <height>24</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Retry</string>
      </property>
     </widget>
    </widget>
