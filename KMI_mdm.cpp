@@ -1110,6 +1110,7 @@ void MidiDeviceManager::slotPollVersion()
         firmwareUpdateState = FWUD_STATE_IDLE;
         //DM_OUT << "fwVerPollSkipConnectCycles = 0";
         fwVerPollSkipConnectCycles = 0;
+        connected = true;
         break;
     case FWUD_STATE_FAIL:
         //DM_OUT << "Firmware Update Failed!!" << firmwareUpdateStateTimer.elapsed();
