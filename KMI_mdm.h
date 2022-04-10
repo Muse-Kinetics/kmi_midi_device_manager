@@ -49,15 +49,18 @@ enum
 // enumerate the states of the firmware update process, not all apply to every product
 enum
 {
-    FWUD_STATE_IDLE,
+    FWUD_STATE_IDLE,                    // 0
     FWUD_STATE_BEGIN,
     FWUD_STATE_GLOBALS_REQ_SEND,
-    FWUD_STATE_GLOBALS_WAIT_RCV,
+    FWUD_STATE_GLOBALS_REQ_SENT_WAIT,
+    FWUD_STATE_GLOBALS_RCVD,
     FWUD_STATE_BL_SEND,
-    FWUD_STATE_BL_SENT_WAIT,
+    FWUD_STATE_BL_SENT_WAIT,            // 6
+    FWUD_STATE_BL_MODE,
     FWUD_STATE_FW_SEND,
     FWUD_STATE_FW_SENT_WAIT,
     FWUD_STATE_GLOBALS_SEND,
+    FWUD_STATE_GLOBALS_SENT_WAIT,
     FWUD_STATE_SUCCESS,
     FWUD_STATE_FAIL
 };
@@ -81,13 +84,13 @@ public:
     bool port_in_open;          // flag if device input port is available and open
     bool port_out_open;         // flag if device output port is available and open
 
-    bool firstFwResponseReceived; // make sure we catch the first response if device is connected when the app launches
+//    bool firstFwResponseReceived; // make sure we catch the first response if device is connected when the app launches
 
     int port_in, port_out;      // the current port in/out numbers
     QString portName_in, portName_out; // the port names of the in/out ports
 
     bool restart;               // flag to halt all actions and restart the app
-    bool failFlag;              // used to abort processes like slotResetConnections
+//    bool failFlag;              // used to abort processes like slotResetConnections
 
     // RtMidi devices
     RtMidiIn *midi_in;
@@ -119,27 +122,33 @@ public:
     QByteArray sysExMessage; //Message to be processed;
 
     //Describes whether or not a fw update has been requested-- useful for managing bootloader reconnects
-    bool globalsRequested; // flag if we are storing global data to restore after update
+    bool fwSaveRestoreGlobals; // set this flag to backup and restore globals before/after a firmware update
+//    bool globalsRequested; // flag if we are storing global data to restore after update
     bool bootloaderMode;
-    bool fwUpdateRequested;
-    bool hackStopTimer;
+//    bool fwUpdateRequested;
+//    bool hackStopTimer;
     bool pollingStatus;
 
     int firmwareUpdateState;
     QElapsedTimer firmwareUpdateStateTimer;
+    int fwVerPollSkipConnectCycles; // set this count to not send fwver request for x connect cycles
+    QElapsedTimer fwVerRequestTimer; // time since the last fwver request was sent
+    bool firstFwVerRequestHasBeenSent; // set this high the first time we send a request, if false then don't wait for timer
 
     QTimer* versionPoller;
-    QTimer* timeoutFwBl;
-    QTimer* timeoutGlobalsReq;
 
 
-    QElapsedTimer versionReplyTimer;
-    QElapsedTimer refreshTimer;
-    QElapsedTimer delayFwTimer;
+//    QTimer* timeoutFwBl;
+//    QTimer* timeoutGlobalsReq;
+
+
+//    QElapsedTimer versionReplyTimer;
+//    QElapsedTimer refreshTimer;
+//    QElapsedTimer delayFwTimer;
 
     // counters to timeout timers
-    unsigned char pollTimeout;
-    int globalsTimerCount;
+//    unsigned char pollTimeout;
+//    int globalsTimerCount;
 
     // stops MIDI if sysex is sending
     bool ioGate;
@@ -174,9 +183,6 @@ signals:
     void signalFwConsoleMessage(QString message);
     void signalFwProgress(int thisPercent);
     void signalFirmwareUpdateComplete(bool);
-    void signalFirmwareUpdateTimeout();
-    void signalBeginBlTimer();
-    void signalBeginFwTimer();
 
     void signalRequestGlobals();
     void signalRestoreGlobals();
@@ -234,8 +240,6 @@ public slots:
     void slotPollVersion();
     void slotStartPolling(QString Caller);
     void slotStopPolling(QString caller);
-    void slotStartGlobalsTimer();
-    void slotStopGlobalTimer();
     void slotCheckGlobalsReceived();
 
     void slotSendSysExBA(QByteArray thisSysexArray); // convert bytearray to unsigned char pointer
@@ -246,12 +250,7 @@ public slots:
     bool slotOpenFirmwareFile(QString filePath);
     bool slotOpenBootloaderFile(QString filePath);
     void slotRequestFirmwareUpdate();
-    void slotEnterBootloader();
-    void slotBeginBlTimer();
-    void slotBootloaderTimeout();
-    void slotSendFirmware();
-    void slotBeginFwTimer();
-    void slotFirmwareTimeout();
+    //void slotSendFirmware();
     void slotFirmwareUpdateReset();
 
     // four prototypes for various packet sizes

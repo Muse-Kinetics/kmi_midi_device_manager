@@ -20,8 +20,8 @@
 #define PID_AUX             0
 #define PID_STRINGPORT      1
 #define PID_SOFTSTEP1       10      // two ports that get translated
-#define PID_SOFTSTEP2_OLD   11      // two ports that get translated
-#define PID_SOFTSTEP        12      // hard coded portnames, uses MIDI PID 11
+#define PID_SOFTSTEP2       11      // two ports that get translated
+#define PID_SOFTSTEP_USB    12      // uses 11 as MIDI PID, hard coded portnames, uses MIDI PID 11
 #define PID_SOFTSTEP_BL     13      // hard coded portnames
 #define PID_12STEP_OLD      20      // two ports that get translated
 #define PID_12STEP          21      // hard coded portnames

@@ -87,6 +87,7 @@ fwUpdate::~fwUpdate()
 
 void fwUpdate::slotRequestFwUpdate()
 {
+    ui->interrupt_warning->show();
     ui->stack->setCurrentIndex(1); // goto the next page
     emit signalRequestFwUpdate(); // alert app to update
     qDebug() << "fwupdate window - emit signalRequestFwUpdate";
@@ -147,7 +148,7 @@ void fwUpdate::slotFwUpdateComplete(bool success)
     else
     {
         updateSuccessful = false;
-        ui->console->insertPlainText("\nFirmware update failed.\nIf you continue to have issues, copy/paste this log and open a support ticket at:\n\nhttps://support.keithmcmillen.com ");
+        ui->console->insertPlainText("\nFirmware update failed.\nPlease try again, and if you continue to have issues, copy/paste this log and open a support ticket at:\n\nhttps://support.keithmcmillen.com ");
 
         slotFwUpdateTimeout();
     }
