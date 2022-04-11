@@ -40,10 +40,10 @@
     <widget class="QTextBrowser" name="textBrowser">
      <property name="geometry">
       <rect>
-       <x>15</x>
+       <x>16</x>
        <y>10</y>
-       <width>471</width>
-       <height>290</height>
+       <width>469</width>
+       <height>289</height>
       </rect>
      </property>
      <property name="styleSheet">
@@ -51,6 +51,7 @@
     background-color: rgba(0,0,0,255);
     color: white;
     font: 14px &quot;Futura-normal&quot;;
+border: black;
 }
 
 /* -------------- Scroll Bar --------------- */
@@ -132,10 +133,10 @@ p, li { white-space: pre-wrap; }
     <widget class="QTextEdit" name="console">
      <property name="geometry">
       <rect>
-       <x>15</x>
+       <x>16</x>
        <y>10</y>
-       <width>471</width>
-       <height>250</height>
+       <width>469</width>
+       <height>249</height>
       </rect>
      </property>
      <property name="styleSheet">
@@ -143,6 +144,7 @@ p, li { white-space: pre-wrap; }
     background-color: rgba(0,0,0,255);
     color: white;
     font: 10px &quot;Futura-normal&quot;;
+border: black;
 }
 
 /* -------------- Scroll Bar --------------- */
