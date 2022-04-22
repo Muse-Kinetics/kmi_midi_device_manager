@@ -1021,11 +1021,7 @@ void MidiDeviceManager::slotPollVersion()
 
         if (PID != PID_SOFTSTEP1 && PID != PID_SOFTSTEP2)
         {
-#ifdef Q_OS_WIN
-            emit signalFwConsoleMessage("\nSending Enter bootloader Command, device and application will reboot.\n");
-#else
             emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
-#endif
         }
 
         emit signalFwProgress(30); // increment progress bar
