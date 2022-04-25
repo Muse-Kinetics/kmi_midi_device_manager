@@ -232,7 +232,7 @@ public slots:
     bool slotCreateVirtualOut(QString portName);
 #endif
 
-    void slotResetConnections(QString portNameApp, QString portNameBootloader);
+    //void slotResetConnections(QString portNameApp, QString portNameBootloader);
 
     void slotTestFeedbackLoop();
 

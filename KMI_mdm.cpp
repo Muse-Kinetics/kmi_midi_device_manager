@@ -145,9 +145,9 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     // timers have to be triggered by these signals from the main thread
     //connect(this, SIGNAL(signalStartPolling(QString)), this, SLOT(slotStartPolling(QString)));
     //connect(this, SIGNAL(signalStopPolling(QString)), this, SLOT(slotStopPolling(QString)));
-    connect(this, SIGNAL(signalBeginBlTimer()), this, SLOT(slotBeginBlTimer()));
-    connect(this, SIGNAL(signalBeginFwTimer()), this, SLOT(slotBeginFwTimer()));
-    connect(this, SIGNAL(signalStopGlobalTimer()), this, SLOT(slotStopGlobalTimer()));
+//    connect(this, SIGNAL(signalBeginBlTimer()), this, SLOT(slotBeginBlTimer()));
+//    connect(this, SIGNAL(signalBeginFwTimer()), this, SLOT(slotBeginFwTimer()));
+//    connect(this, SIGNAL(signalStopGlobalTimer()), this, SLOT(slotStopGlobalTimer()));
 
     if (PID != PID_AUX)
     {
@@ -542,8 +542,8 @@ bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
 // -----------------------------------------------------------
 
 // reset connections is needed when the bootloader and app port names don't match
-void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNameBootloader)
-{
+//void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNameBootloader)
+//{
 //    DM_OUT << "slotResetConnections called - portName: " << portNameApp << " portNameBootloader: " << portNameBootloader << "bootloaderMode: " << bootloaderMode;
 //    bool refreshDone = false;
 //    bool initialBootloaderMode = bootloaderMode;
@@ -849,7 +849,7 @@ void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNa
 //        DM_OUT << "Error setting callback - Message: " << QString::fromStdString(error.getMessage());
 //    }
 //    midi_in->ignoreTypes( false, false, false );
-}
+//}
 
 // sends a sysex universal ack with magic number, if received then alert app
 void MidiDeviceManager::slotTestFeedbackLoop()
