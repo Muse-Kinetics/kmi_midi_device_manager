@@ -926,9 +926,10 @@ void MidiDeviceManager::slotPollVersion()
     //DM_OUT << "slotPollVersion called - pollingStatus: " << pollingStatus << " firmwareUpdateState: " << firmwareUpdateState << " portsAreSetUp: " << portsAreSetUp << " bootloaderMode:" << bootloaderMode << " fwVerPollSkipConnectCycles: " << fwVerPollSkipConnectCycles;
     //if (!portsAreSetUp) DM_OUT << "port_in: " << port_in << " port_out: " << port_out << " port_in_open: " << port_in_open << " port_out_open: " << port_out_open;
 
+    int remainingSeconds = round((FW_UPDATE_TIMEOUT_INTERVAL - firmwareUpdateStateTimer.elapsed()) / 1000);
+
     if (firmwareUpdateState > FWUD_STATE_BEGIN && firmwareUpdateStateTimer.elapsed() > (FW_UPDATE_TIMEOUT_INTERVAL - 10000))
     {
-        int remainingSeconds = round((FW_UPDATE_TIMEOUT_INTERVAL - firmwareUpdateStateTimer.elapsed()) / 1000);
         if (remainingSeconds > 0) emit signalFwConsoleMessage(QString("\nTimeout in %1...").arg(remainingSeconds));
     }
 
@@ -1031,6 +1032,13 @@ void MidiDeviceManager::slotPollVersion()
         break;
     case FWUD_STATE_BL_SENT_WAIT:
         DM_OUT << "Bootloader image/command sent, waiting..." << firmwareUpdateStateTimer.elapsed();
+
+        if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
+        {
+            DM_OUT << "Sending SysEx ID version request (again)";
+            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+        }
+
         if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
         {
             firmwareUpdateState = FWUD_STATE_FAIL;
@@ -1080,6 +1088,13 @@ void MidiDeviceManager::slotPollVersion()
         break;
     case FWUD_STATE_FW_SENT_WAIT:
         DM_OUT << "Firmware Image sent, waiting for device to reboot..." << firmwareUpdateStateTimer.elapsed();
+
+        if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
+        {
+            DM_OUT << "Sending SysEx ID version request (again)";
+            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+        }
+
         if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
         {
             firmwareUpdateState = FWUD_STATE_FAIL;
