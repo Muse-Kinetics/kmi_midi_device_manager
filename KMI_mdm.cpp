@@ -960,21 +960,28 @@ void MidiDeviceManager::slotPollVersion()
 //        globalsRequested = true; // set flag, it gets cleared when firmware completes or times out
         emit signalRequestGlobals();
         emit signalFwProgress(10); // increment progress bar
-        emit signalFwConsoleMessage(QString("\nBacking up %1 global settings...").arg(deviceName));
+        emit signalFwConsoleMessage(QString("\n\nBacking up %1 global settings...").arg(deviceName));
         firmwareUpdateState = FWUD_STATE_GLOBALS_REQ_SENT_WAIT;
         firmwareUpdateStateTimer.restart();
         break;
     case FWUD_STATE_GLOBALS_REQ_SENT_WAIT:
         DM_OUT << "Globals request sent, waiting for a response..." << firmwareUpdateStateTimer.elapsed();
-        if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
+        if (remainingSeconds == 25)
         {
-            firmwareUpdateState = FWUD_STATE_FAIL;
+            DM_OUT << "Sending Globals request (again)";
+            emit signalRequestGlobals();
+        }
+        else if (remainingSeconds < 15)
+        {
+            DM_OUT << "No response to globals request, skipping";
+            emit signalFwConsoleMessage("\n\nNo response to globals backup request, resetting to default settings and proceeding with firmware update.\n");
+            firmwareUpdateState = FWUD_STATE_BL_SEND;
         }
         break;
     case FWUD_STATE_GLOBALS_RCVD:
         DM_OUT << "Globals received";
         pollingStatus = false;
-        emit signalFwConsoleMessage("\nGlobals Saved.");
+        emit signalFwConsoleMessage("\n\nGlobals Saved.\n");
         emit signalFwProgress(20); // increment progress bar
         firmwareUpdateState = FWUD_STATE_BL_SEND;
         firmwareUpdateStateTimer.restart();
@@ -1104,15 +1111,8 @@ void MidiDeviceManager::slotPollVersion()
         emit signalRestoreGlobals(); // editor will handle this message
         emit signalFwProgress(90); // increment progress bar
         emit signalFwConsoleMessage("\nRestoring Globals...\n");
-        firmwareUpdateState = FWUD_STATE_GLOBALS_SENT_WAIT;
+        firmwareUpdateState = FWUD_STATE_SUCCESS;
         firmwareUpdateStateTimer.restart();
-        break;
-    case FWUD_STATE_GLOBALS_SENT_WAIT:
-        DM_OUT << "Firmware Image sent, waiting for device to reboot..." << firmwareUpdateStateTimer.elapsed();
-        if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
-        {
-            firmwareUpdateState = FWUD_STATE_FAIL;
-        }
         break;
     case FWUD_STATE_SUCCESS:
         DM_OUT << "Firmware Update Successful!" << firmwareUpdateStateTimer.elapsed();

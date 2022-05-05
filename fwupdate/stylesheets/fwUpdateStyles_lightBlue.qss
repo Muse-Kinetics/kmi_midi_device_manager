@@ -4,7 +4,7 @@ QTextEdit {
 
 
 QLabel {
-        font-family: "Open Sans Semibold";
+        font-family: "Open Sans";
         font-size: 12pt;
         color: white;
         background-color: rgba(0,0,0,0);
