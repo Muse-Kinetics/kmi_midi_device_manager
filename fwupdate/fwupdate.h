@@ -39,11 +39,9 @@ public:
 
     QString deviceName, appFwVer;
 
-    //Buttons
+    //Button styles
     QFile* blueStyleFile;
     QString blueStyleString;
-
-    //Buttons
     QFile* grayStyleFile;
     QString grayStyleString;
 

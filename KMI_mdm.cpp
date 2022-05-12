@@ -1040,6 +1040,10 @@ void MidiDeviceManager::slotPollVersion()
     case FWUD_STATE_BL_SENT_WAIT:
         DM_OUT << "Bootloader image/command sent, waiting..." << firmwareUpdateStateTimer.elapsed();
 
+        if (remainingSeconds == 20 ||remainingSeconds == 10)
+        {
+            kmiPorts->slotRefreshPortMaps(); // kick it
+        }
         if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
         {
             DM_OUT << "Sending SysEx ID version request (again)";
@@ -1096,6 +1100,10 @@ void MidiDeviceManager::slotPollVersion()
     case FWUD_STATE_FW_SENT_WAIT:
         DM_OUT << "Firmware Image sent, waiting for device to reboot..." << firmwareUpdateStateTimer.elapsed();
 
+        if (remainingSeconds == 20 ||remainingSeconds == 10)
+        {
+            kmiPorts->slotRefreshPortMaps(); // kick it
+        }
         if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
         {
             DM_OUT << "Sending SysEx ID version request (again)";
@@ -1161,6 +1169,8 @@ void MidiDeviceManager::slotPollVersion()
 
         if (firstFwVerRequestHasBeenSent == false || fwVerRequestTimer.elapsed() > 5000) // only send a request once every 5 seconds
         {
+            bool requestSent = false;
+
             if (fwVerPollSkipConnectCycles > 0) // don't send request while bootloader installs
             {
                 DM_OUT << "Blocking firmware version request - fwVerPollSkipConnectCycles: " << fwVerPollSkipConnectCycles;
@@ -1169,19 +1179,26 @@ void MidiDeviceManager::slotPollVersion()
             {
                 DM_OUT << "Sending SSCOM firmware version request";
                 slotSendSysEx(_fw_req_softstep, sizeof(_fw_req_softstep));
+                requestSent = true;
             }
             else if (deviceName == "12 Step") // 12 step also doesn't use the universal syx dev id request
             {
                 DM_OUT << "Sending 12 Step firmware version request";
                 slotSendSysEx(_fw_req_12step, sizeof(_fw_req_12step));
+                requestSent = true;
             }
             else // every other product
             {
                 DM_OUT << "Sending SysEx ID version request";
                 slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+                requestSent = true;
             }
             firstFwVerRequestHasBeenSent = true;
             fwVerRequestTimer.restart();
+            if (requestSent == true)
+            {
+                emit signalFwConsoleMessage("\nRequesting firmware version from device...");
+            }
         }
     }
 }
@@ -1242,9 +1259,9 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 
     ioGate = false; // pause any midi output while sending SysEx
 
-    if (midi_out == nullptr)
+    if (port_out_open == false)
     {
-        DM_OUT << "ERROR: midi_out is not instantiated, aborting slotSendMIDI!";
+        DM_OUT << "ERROR: midi_out is not open, aborting slotSendMIDI!";
         return; // handler doesn't exist
     }
 
@@ -1402,7 +1419,10 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         if ((unsigned char)sysExMessageByteArray.at(9) == 1)
         {
             bootloaderMode = true;
-            deviceName = deviceName.append(" Bootloader");
+            if (!deviceName.contains("Bootloader"))
+            {
+                deviceName = deviceName.append(" Bootloader");
+            }
         }
         else
         {
@@ -1663,9 +1683,9 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;
 #endif
 
-    if (midi_out == nullptr)
+    if (port_out_open == false)
     {
-        DM_OUT << "ERROR: midi_out is not instantiated, aborting slotSendMIDI!";
+        DM_OUT << "ERROR: midi_out is not open, aborting slotSendMIDI! - Status: " << status;
         return; // handler doesn't exist
     }
 
@@ -1676,8 +1696,9 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     }
     catch (RtMidiError &error)
     {
-        DM_OUT << "MIDI SEND ERR:" << (QString::fromStdString(error.getMessage()));
-        emit signalFwConsoleMessage("MIDI SEND ERR:" + (QString::fromStdString(error.getMessage())));
+        QString errorString = QString("MIDI SEND ERR: %1 \nStatus: %2").arg(QString::fromStdString(error.getMessage()), QString::number(status));
+        DM_OUT << errorString;
+        emit signalFwConsoleMessage(errorString);
     }
 }
 

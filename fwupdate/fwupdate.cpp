@@ -16,18 +16,14 @@ fwUpdate::fwUpdate(QWidget *parent, QString initDeviceName, QString initAppFwVer
 
     qDebug() << "Create new fwUpdate window: " << deviceName;
 
-    //StyleSheets for Preset Library
-
+    //StyleSheets for Buttons
     blueStyleFile = new QFile(":/stylesheets/RedButtonStyleSheet.qss"); // eb todo - fix this in quneo/qunexus
     blueStyleFile->open(QFile::ReadOnly);
     blueStyleString = QLatin1String(blueStyleFile->readAll());
 
-    //StyleSheets for Preset Library
     grayStyleFile = new QFile(":/stylesheets/GrayButtonStyleSheet.qss"); // eb todo - fix this in quneo/qunexus
     grayStyleFile->open(QFile::ReadOnly);
     grayStyleString = QLatin1String(grayStyleFile->readAll());
-
-    qDebug() << "apply stylesheets to buttons";
 
     ui->setupUi(this);
 
@@ -38,6 +34,8 @@ fwUpdate::fwUpdate(QWidget *parent, QString initDeviceName, QString initAppFwVer
     // scroll to bottom automatically
     ui->console->ensureCursorVisible();
     ui->console->verticalScrollBar()->setValue(ui->console->verticalScrollBar()->maximum());
+
+    qDebug() << "apply stylesheets to buttons";
 
     ui->butt_done->hide();
     ui->butt_done->setStyleSheet(blueStyleString);
@@ -149,7 +147,7 @@ void fwUpdate::slotFwUpdateComplete(bool success)
     {
         updateSuccessful = false;
         ui->console->insertPlainText("\nFirmware update failed.\nPlease try again, and if you continue to have issues, copy/paste this log and open a support ticket at:\n\nhttps://support.keithmcmillen.com ");
-
+        ui->console->verticalScrollBar()->setValue(ui->console->verticalScrollBar()->maximum());
         slotFwUpdateTimeout();
     }
 }
