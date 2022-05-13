@@ -9,22 +9,20 @@ troubleshoot::troubleshoot(QWidget *parent, QString initDeviceName, QString init
     QWidget(parent),
     ui(new Ui::troubleshoot)
 {
-    qDebug() << "Create new troubleshoot window: " << deviceName;
-
     this->setWindowFlags(Qt::Window | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
     this->setWindowModality(Qt::NonModal);
     this->setFixedSize(1000,480);
     this->setWindowTitle("Diagnostics");
 
     this->hide();
-    qDebug() << "setup widget";
+    //qDebug() << "setup widget";
 
     suppressStatus = false;
 
     //-------- Setup Ui
     ui->setupUi(this);
 
-    qDebug() << "setup windows";
+    //qDebug() << "setup windows";
 
     ui->statusWindow->setReadOnly(true);
     ui->portsWindow->setReadOnly(true);
@@ -275,7 +273,7 @@ void troubleshoot::slotGatherReport()
 
 void troubleshoot::slotScrollTroubleUp()
 {
-    qDebug() << "slotScrollTroubleUp called - troubleScroll value: " <<  ui->troubleWindow->verticalScrollBar()->value();
+    //qDebug() << "slotScrollTroubleUp called - troubleScroll value: " <<  ui->troubleWindow->verticalScrollBar()->value();
     ui->troubleWindow->verticalScrollBar()->setValue(0);
-    qDebug() << "value set - troubleScroll value: " <<  ui->troubleWindow->verticalScrollBar()->value();
+    //qDebug() << "value set - troubleScroll value: " <<  ui->troubleWindow->verticalScrollBar()->value();
 }
