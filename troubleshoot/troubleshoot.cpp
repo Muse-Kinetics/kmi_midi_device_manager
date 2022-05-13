@@ -62,6 +62,7 @@ troubleshoot::troubleshoot(QWidget *parent, QString initDeviceName, QString init
     connect(ui->butt_close, SIGNAL(clicked()), this, SLOT(close()));
 
     ui->statusWindow->clear();
+    ui->troubleWindow->viewport()->setMaximumWidth(295);
     slotAppendToStatusLog(QString("Log initialized - %1").arg(appFwVer.left(appFwVer.length() - 2)));
     ui->troubleWindow->clear();
     ui->troubleWindow->append(QString("The %1 MIDI port has not been detected by the operating system. If you have plugged in the device and still see this message, try the following:\n\n"
@@ -88,8 +89,8 @@ troubleshoot::troubleshoot(QWidget *parent, QString initDeviceName, QString init
     QTimer::singleShot(100, this, SLOT(slotScrollTroubleUp()));
 
     // fix windows that are not on the screen
-    int posX = this->mapToGlobal(QPointF(0,0)).x();
-    int posY = this->mapToGlobal(QPointF(0,0)).y();
+    int posX = this->mapToGlobal(QPoint(0,0)).x();
+    int posY = this->mapToGlobal(QPoint(0,0)).y();
 
 
     qDebug() << "thisPosition - x: " << posX << " y: " << posY;
