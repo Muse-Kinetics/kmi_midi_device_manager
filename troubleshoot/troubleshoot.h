@@ -56,6 +56,7 @@ public slots:
 
     void slotAppendToStatusLog(QString message);
     void slotGatherReport();
+    void slotOpenYoutubeTutorial();
     void slotScrollTroubleUp();
 
 private:

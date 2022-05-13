@@ -59,29 +59,35 @@ troubleshoot::troubleshoot(QWidget *parent, QString initDeviceName, QString init
     connect(ui->butt_gather, SIGNAL(clicked()), this, SLOT(slotGatherReport()));
     connect(ui->butt_close, SIGNAL(clicked()), this, SLOT(close()));
 
+#ifdef Q_OS_MAC
+    ui->butt_youtube->setText("Click here to watch the MacOS Audio MIDI Setup tutorial");
+    connect(ui->butt_youtube, SIGNAL(clicked()), this, SLOT(slotOpenYoutubeTutorial()));
+#endif
+
     ui->statusWindow->clear();
     ui->troubleWindow->viewport()->setMaximumWidth(295);
     slotAppendToStatusLog(QString("Log initialized - %1").arg(appFwVer.left(appFwVer.length() - 2)));
     ui->troubleWindow->clear();
     ui->troubleWindow->append(QString("The %1 MIDI port has not been detected by the operating system. If you have plugged in the device and still see this message, try the following:\n\n"
                                       "1) Disconnect %1.\n"
-                                      "2) Close all other applications.\n"
-                                      "3) Close and then re-open the %1 editor.\n"
+                                      "3) Disconnect ALL other MIDI devices from your computer.\n"
+                                      "4) Close all other applications.\n"
+                                      "5) Close and then re-open the %1 editor.\n"
                                       "\n"
                                       "Before proceeding to the next step, make sure that you are using a USB cable that you know works. Test it with other USB MIDI devices and verify that power and data work. When in doubt, try swapping the cable.\n"
                                       "\n"
-                                      "4) Reconnect %1 directly to the computer, do not use a USB hub.\n"
+                                      "6) Reconnect %1 directly to the computer, do not use a USB hub.\n"
                                       "\n"
                                       "If %1 is still not detected:\n"
                                       "\n"
                                   #ifdef Q_OS_WIN
-                                      "5) Open the Windows Device Manager by holding down the Windows key and pressing R, and then typing \"devmgmt.msc\" and pressing enter.\n"
-                                      "6) Scroll down and double click \"Sound, video and game controllers\". %1 should be listed, double click it and verify that the Device Status says \"This device is working properly.\"\n"
-                                      "7) If you're still having issues connecting, try right clicking %1 and selecting \"Update Driver\". If that doesn't work, try \"Uninstall device\" and rebooting.\n"
+                                      "7) Open the Windows Device Manager by holding down the Windows key and pressing R, and then typing \"devmgmt.msc\" and pressing enter.\n"
+                                      "8) Scroll down and double click \"Sound, video and game controllers\". %1 should be listed, double click it and verify that the Device Status says \"This device is working properly.\"\n"
+                                      "9) If you're still having issues connecting, try right clicking %1 and selecting \"Update Driver\". If that doesn't work, try \"Uninstall device\" and rebooting.\n"
                                   #else
-                                      "5) Open Audio Midi Setup by holding down the Command key and pressing the Space Bar, and then typing \"Audio MIDI Setup\" and pressing enter.\n"
-                                      "6) Open the MIDI Studio by holding down the Command key and pressing 2. %1 should be displayed as a square icon, it should not be greyed out. Double click the icon and verify that the \"Device is online\" box is checked.\n"
-                                      "7) If you're still having issues connecting, try selecting the %1 icon and pressing delete, then reboot your computer.\n"
+                                      "7) Open Audio Midi Setup by holding down the Command key and pressing the Space Bar, and then typing \"Audio MIDI Setup\" and pressing enter.\n"
+                                      "8) Open the MIDI Studio by holding down the Command key and pressing 2. %1 should be displayed as a square icon, it should not be greyed out. Double click the icon and verify that the \"Device is online\" box is checked.\n"
+                                      "9) If you're still having issues connecting, try selecting the %1 icon and pressing delete, then reboot your computer.\n"
                                   #endif
                                       "8) If none of the above works, contact support and copy/paste the diagnostic report into your support ticket.").arg(deviceName));
     QTimer::singleShot(100, this, SLOT(slotScrollTroubleUp()));
@@ -133,10 +139,11 @@ void troubleshoot::slotDetected()
     ui->troubleWindow->clear();
     ui->troubleWindow->append(QString("%1 has not responded to the firmware version request. \n"
                                       "1) Disconnect %1.\n"
-                                      "2) Close all other applications.\n"
-                                      "3) Close and then re-open the %1 editor.\n"
-                                      "4) Reconnect %1 directly to the computer, do not use a USB hub.\n"
-                                      "5) If %1 still doesn't respond, contact support and copy/paste the diagnostic report into your support ticket.").arg(deviceName));
+                                      "2) Disconnect ALL other MIDI devices from your computer.\n"
+                                      "3) Close all other applications.\n"
+                                      "4) Close and then re-open the %1 editor.\n"
+                                      "5) Reconnect %1 directly to the computer, do not use a USB hub.\n"
+                                      "6) If %1 still doesn't respond, contact support and copy/paste the diagnostic report into your support ticket.").arg(deviceName));
 }
 
 void troubleshoot::slotBootloaderMode()
@@ -191,11 +198,12 @@ void troubleshoot::slotRequestFwUpdate()
     ui->troubleWindow->clear();
     ui->troubleWindow->append(QString("The editor is attempting to update the %1 firmare. If the process does not complete successfully:\n\n"
                                       "1) Disconnect %1.\n"
-                                      "2) Close all other applications.\n"
-                                      "3) Close and then re-open the %1 editor.\n"
-                                      "4) Reconnect %1 directly to the computer, do not use a USB hub.\n"
-                                      "5) Retry the firmware update process.\n"
-                                      "6) If the firmware update process fails again, contact support and copy/paste the diagnostic report into your support ticket.\n").arg(deviceName));
+                                      "2) Disconnect ALL other MIDI devices from your computer.\n"
+                                      "3) Close all other applications.\n"
+                                      "4) Close and then re-open the %1 editor.\n"
+                                      "5) Reconnect %1 directly to the computer, do not use a USB hub.\n"
+                                      "6) Retry the firmware update process.\n"
+                                      "7) If the firmware update process fails again, contact support and copy/paste the diagnostic report into your support ticket.\n").arg(deviceName));
     QTimer::singleShot(20, this, SLOT(slotScrollTroubleUp()));
 }
 
@@ -211,11 +219,12 @@ void troubleshoot::slotFirmwareUpdated(bool success)
     {
         ui->troubleWindow->append(QString("The firmware update has failed.\n\n"
                                           "1) Disconnect %1.\n"
-                                          "2) Close all other applications.\n"
-                                          "3) Close and then re-open the %1 editor.\n"
-                                          "4) Reconnect %1 directly to the computer, do not use a USB hub.\n"
-                                          "5) Follow the prompts to attempt the firmware update again.\n"
-                                          "6) If %1 still doesn't respond, contact support and copy/paste the diagnostic report into your support ticket.").arg(deviceName));
+                                          "2) Disconnect ALL other MIDI devices from your computer.\n"
+                                          "3) Close all other applications.\n"
+                                          "4) Close and then re-open the %1 editor.\n"
+                                          "5) Reconnect %1 directly to the computer, do not use a USB hub.\n"
+                                          "6) Follow the prompts to attempt the firmware update again.\n"
+                                          "7) If %1 still doesn't respond, contact support and copy/paste the diagnostic report into your support ticket.").arg(deviceName));
 
     }
 }
@@ -269,6 +278,11 @@ void troubleshoot::slotGatherReport()
                              "Troubleshooting:\n"
                              "%3").arg(ui->statusWindow->toPlainText(), ui->portsWindow->toPlainText(), ui->troubleWindow->toPlainText());
     clipboard->setText(report);
+}
+
+void troubleshoot::slotOpenYoutubeTutorial()
+{
+    QDesktopServices::openUrl(QUrl("https://youtu.be/notlkOO_FS4"));
 }
 
 void troubleshoot::slotScrollTroubleUp()
