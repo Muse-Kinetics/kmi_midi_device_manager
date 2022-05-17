@@ -1496,7 +1496,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         if (firmwareUpdateState)
         {
             //
-            if (firmwareUpdateState == FWUD_STATE_FW_SENT_WAIT)
+            if (firmwareUpdateState >= FWUD_STATE_FW_SENT_WAIT) // if at any point after sending the firmware packet we get a match, then success
             {
                 if (fwSaveRestoreGlobals == true)
                 {
@@ -1506,10 +1506,6 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
                 {
                     firmwareUpdateState = FWUD_STATE_SUCCESS;
                 }
-            }
-            else
-            {
-                firmwareUpdateState = FWUD_STATE_FAIL; // something went wrong, shouldn't go here
             }
         }
         else // not updating firmware, connect to editor
