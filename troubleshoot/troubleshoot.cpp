@@ -187,7 +187,7 @@ void troubleshoot::slotSetDevVersion(QString fwVersion, QString blVersion)
 
 void troubleshoot::slotRequestFwUpdate()
 {
-    if (suppressStatus = true)
+    if (suppressStatus == true)
     {
         suppressStatus = false;
     }
