@@ -1597,9 +1597,9 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
 
     uchar newStatus = status + (chan < 16 ? chan : 0); // combine status byte with any valid channel data
 
-#ifdef MDM_DEBUG_ENABLED
+//#ifdef MDM_DEBUG_ENABLED
     DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4").arg(status).arg(d1).arg(d2).arg(chan);
-#endif
+//#endif
 
     std::vector<uchar> packet;
     packet.clear();

@@ -55,7 +55,7 @@ unsigned char _fw_ver_12step[] =
 
 unsigned char _fw_ver_softstep[] =
 {
-    1, 0, 3
+    1, 0, 4
 };
 
 unsigned char _bl_ver_softstep[] =
