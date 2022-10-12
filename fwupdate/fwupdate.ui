@@ -240,7 +240,10 @@ p, li { white-space: pre-wrap; }
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: rgb(255, 0, 0);</string>
+      <string notr="true">QLabel{
+	color: rgb(255, 0, 0);
+	font: 15px ;
+}</string>
      </property>
      <property name="text">
       <string>DO NOT interrupt the firmware update!</string>

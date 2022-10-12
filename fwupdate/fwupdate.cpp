@@ -47,6 +47,8 @@ fwUpdate::fwUpdate(QWidget *parent, QString initDeviceName, QString initAppFwVer
     ui->butt_ok->setStyleSheet(blueStyleString);
     ui->butt_ok->setAutoDefault(false);
 
+    ui->progressBar->setTextVisible(false);
+
     //ui->butt_retry->hide();
     //ui->butt_retry->setStyleSheet(blueStyleString);
     //ui->butt_retry->setAutoDefault(false);
