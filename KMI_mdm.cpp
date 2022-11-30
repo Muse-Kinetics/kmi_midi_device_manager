@@ -159,7 +159,7 @@ void MidiDeviceManager::slotUpdatePID(int thisPID)
 {
     PID = thisPID;
     deviceName = lookupPID.value(PID);
-    qDebug() << "updatePID: " << PID << " deviceName: " << deviceName;
+    //qDebug() << "updatePID: " << PID << " deviceName: " << deviceName;
 }
 
 // **********************************************************************************
@@ -1598,7 +1598,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     uchar newStatus = status + (chan < 16 ? chan : 0); // combine status byte with any valid channel data
 
 //#ifdef MDM_DEBUG_ENABLED
-    DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4").arg(status).arg(d1).arg(d2).arg(chan);
+    DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4 newStatus: %5").arg(status).arg(d1).arg(d2).arg(chan).arg(newStatus);
 //#endif
 
     std::vector<uchar> packet;
@@ -1623,6 +1623,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     case MIDI_CONTROL_CHANGE:
     case MIDI_PITCH_BEND:
         if ((chan != 255 && chan > 127) || d1 > 127 || d2 > 127) return; // catch bad data
+        //DM_OUT << QString("packet: status: %1 d1: %2 d2: %3").arg(newStatus).arg(d1).arg(d2);
         packet.push_back(newStatus);
         packet.push_back(d1);
         packet.push_back(d2);
@@ -1688,6 +1689,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     // prepare and send the packet
     try
     {
+        //DM_OUT << "RAW packet: " << packet;
         midi_out->sendMessage( &packet );
     }
     catch (RtMidiError &error)
