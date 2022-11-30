@@ -1286,7 +1286,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 // *************************************************
 void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::vector< unsigned char > *sysExMessageCharArray)
 {
-    DM_OUT << "slotProcessSysEx called - PID: " << PID << " deviceName: " << deviceName;
+    DM_OUT << "slotProcessSysEx called - PID: " << PID << " deviceName: " << deviceName << " length: " << sysExMessageByteArray.length();
 
     // ********************************************
     // Test for feedback loop
