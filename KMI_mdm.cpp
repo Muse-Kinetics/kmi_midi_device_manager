@@ -1267,6 +1267,18 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 
     try
     {
+        // test if sysex start/stop are missing, and if so then add them
+        if (message[0] != MIDI_SX_START)
+        {
+            message.insert(message.begin(), MIDI_SX_START);
+            len++;
+        }
+        if (message[len - 1] != MIDI_SX_STOP) // len is not zero indexed
+        {
+            message.push_back(MIDI_SX_STOP);
+            len++;
+        }
+
         midi_out->sendMessage( &message );
     }
     catch (RtMidiError &error)
