@@ -10,7 +10,7 @@
   Written by Eric Bateman, August 2021.
   (c) Copyright 2021 Keith McMillen Instruments, all rights reserved.
 
-  See KMI_dm.cpp for more details.
+  See KMI_mdm.cpp for more details.
 
 */
 
