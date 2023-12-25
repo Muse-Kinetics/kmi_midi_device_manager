@@ -14,5 +14,6 @@
         <file>stylesheets/appDialog_SoftStep.qss</file>
         <file>stylesheets/appDialog_QuNexus.qss</file>
         <file>stylesheets/appDialog_QuNexus_WIN.qss</file>
+        <file>stylesheets/menuBarWin.qss</file>
     </qresource>
 </RCC>
