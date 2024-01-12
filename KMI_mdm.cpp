@@ -47,7 +47,9 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     lookupPID.insert(PID_SOFTSTEP1, "SoftStep1");
     lookupPID.insert(PID_SOFTSTEP2, "SoftStep2");
     lookupPID.insert(PID_SOFTSTEP_BL, "SoftStep Bootloader");
-    lookupPID.insert(PID_12STEP, "12 Step");
+    lookupPID.insert(PID_12STEP1, "12 Step1");
+    lookupPID.insert(PID_12STEP2, "12 Step2");
+    lookupPID.insert(PID_12STEP_BL, "12 Step Bootloader");
     lookupPID.insert(PID_QUNEXUS, "QuNexus");
     lookupPID.insert(PID_KBOARD, "K-Board");
     lookupPID.insert(PID_APPL_CBL, "KMI Apple Cable");
@@ -677,10 +679,13 @@ void MidiDeviceManager::slotPollVersion()
 
         switch (PID)
         {
+        case PID_12STEP1:
+        case PID_12STEP2:
         case PID_SOFTSTEP1:
         case PID_SOFTSTEP2:
             if ((uchar)deviceFirmwareVersion[0] < 1) // pre-bootloader firmware
             {
+                // Softstep specific:
                 // version 98 is a placeholder for ZenDesk users and has a bootloader
                 // version 99 is the trojan horse bootloader update
                 // everything else needs to have the bootloader installed
@@ -689,17 +694,28 @@ void MidiDeviceManager::slotPollVersion()
                 {
                     emit signalFwConsoleMessage("\n\n*** Installing bootloader *** - device will reboot several times!\n");
 
-                    DM_OUT << "fwVerPollSkipConnectCycles = 2";
-                    fwVerPollSkipConnectCycles = 2; // don't send fw version request during bootloader install
+                    //DM_OUT << "fwVerPollSkipConnectCycles = 2";
+                    fwVerPollSkipConnectCycles = 1; // don't send fw version request during bootloader install
 
-                    // this will install the firmware and reboot the device into bootloader mode
+                    // this will:
+                    // - install the trojan horse firmware image
+                    // - reboot the device
+                    // - trojan horse installs the bootloader
+                    // - device reboots into bootloader mode
                     slotSendSysExBA(bootloaderByteArray);
                 }
             }
-            else // this should be the standard method moving forward
+            else // this is the standard method to enter bootloader mode, once a bootloader is installed
             {
                 emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
-                slotSendSysEx(_bl_softstep, sizeof(_bl_softstep));
+                if (PID == PID_SOFTSTEP1 || PID == PID_SOFTSTEP2)
+                {
+                    slotSendSysEx(_bl_softstep, sizeof(_bl_softstep));
+                }
+                else if (PID == PID_12STEP1 || PID == PID_12STEP2)
+                {
+                    slotSendSysEx(_bl_12step, sizeof(_bl_12step));
+                }
             }
 
             break;
@@ -713,7 +729,7 @@ void MidiDeviceManager::slotPollVersion()
             DM_OUT << "Bootloader command not configured for this device";
         }
 
-        if (PID != PID_SOFTSTEP1 && PID != PID_SOFTSTEP2)
+        if (PID != PID_SOFTSTEP1 && PID != PID_SOFTSTEP2 && PID != PID_12STEP1 && PID != PID_12STEP2)
         {
             emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
         }
@@ -726,15 +742,15 @@ void MidiDeviceManager::slotPollVersion()
     case FWUD_STATE_BL_SENT_WAIT:
         DM_OUT << "Bootloader image/command sent, waiting..." << firmwareUpdateStateTimer.elapsed();
 
-        if (remainingSeconds == 20 ||remainingSeconds == 10)
-        {
-            kmiPorts->slotRefreshPortMaps(); // kick it
-        }
-        if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
-        {
-            DM_OUT << "Sending SysEx ID version request (again)";
-            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
-        }
+//        if (remainingSeconds == 20 ||remainingSeconds == 10)
+//        {
+//            kmiPorts->slotRefreshPortMaps(); // kick it
+//        }
+//        if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
+//        {
+//            DM_OUT << "Sending SysEx ID version request (again)";
+//            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+//        }
 
         if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
         {
@@ -788,12 +804,14 @@ void MidiDeviceManager::slotPollVersion()
 
         if (remainingSeconds == 20 ||remainingSeconds == 10)
         {
-            kmiPorts->slotRefreshPortMaps(); // kick it
+            // EB TODO - are these lines necessary? Didn't need for 12 Step, does it break other devices? Windows?
+            //kmiPorts->slotRefreshPortMaps(); // kick it
         }
         if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
         {
-            DM_OUT << "Sending SysEx ID version request (again)";
-            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+            // EB TODO - are these lines necessary? Didn't need for 12 Step, does it break other devices? Windows?
+            //DM_OUT << "Sending SysEx ID version request (again)";
+            //slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
         }
 
         if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
@@ -860,6 +878,7 @@ void MidiDeviceManager::slotPollVersion()
             if (fwVerPollSkipConnectCycles > 0) // don't send request while bootloader installs
             {
                 DM_OUT << "Blocking firmware version request - fwVerPollSkipConnectCycles: " << fwVerPollSkipConnectCycles;
+                fwVerPollSkipConnectCycles--;
             }
             else if (deviceName == "SSCOM") // old softStep firmware doesn't use the universal syx dev id request
             {
@@ -867,9 +886,10 @@ void MidiDeviceManager::slotPollVersion()
                 slotSendSysEx(_fw_req_softstep, sizeof(_fw_req_softstep));
                 requestSent = true;
             }
-            else if (deviceName == "12 Step") // 12 step also doesn't use the universal syx dev id request
+            else if (portName_out == TWELVESTEP1_IN_P1) // 12 step legacy also doesn't use the universal syx dev id request
+                                                        // but new firmware will respond to the old message with the standard sysex universal ID reply
             {
-                DM_OUT << "Sending 12 Step firmware version request";
+                DM_OUT << "Sending 12 Step legacy firmware version request";
                 slotSendSysEx(_fw_req_12step, sizeof(_fw_req_12step));
                 requestSent = true;
             }
@@ -1128,7 +1148,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
             slotUpdatePID(PID_MIDI);
         }
 
-        DM_OUT << "ID Reply - PID_MIDI: " << PID_MIDI << " BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion; // << " fullMsg: " << sysExMessageByteArray;
+        DM_OUT << "ID Reply - PID_MIDI: " << PID_MIDI << " BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion << " bootloaderMode: " << bootloaderMode;
     }
     // ********************************************
     // process non fw/id SysEx Messages

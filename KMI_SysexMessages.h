@@ -57,6 +57,9 @@ extern unsigned char _quneo_toggleProgramChangeOutSysExData[17];
 // *********************************************************
 // Enter bootloader commands - TODO see if this can be done programatically or in an array
 
+// 12 Step
+extern unsigned char _bl_12step[21];
+
 // SoftStep
 extern unsigned char _bl_softstep[21];
 
