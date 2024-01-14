@@ -40,6 +40,12 @@ extern unsigned char _fw_req_12step[67];
 // 12Step Firmware Reply
 extern unsigned char _fw_reply_12step[5];
 
+// 12Step Tether
+extern unsigned char _12s_tether_on[29];
+extern unsigned char _12s_tether_off[29];
+extern unsigned char _12s_standalone_on[29];
+extern unsigned char _12s_standalone_off[29];
+
 // ***** QuNeo Specific commands *************************
 // QuNeo swap LEDs
 extern unsigned char _quneo_swap_leds[17];

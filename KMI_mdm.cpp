@@ -1468,64 +1468,115 @@ void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
         cc = data1;
         val = data2;
 
-        // RPNs are a 14bit address (CC100 and CC101) with a 14bit data value (CC6 and CC38). In practice
-        // the midi org has only registered 6 addresses, and the MPE Configuration Message sets channels, so
-        // only the MSB (CC6) is used for data entry. The below routine preserves compatability and could be
-        // used as a basis for supporting NRPNs, which are manufacture defined. There is some confusion in the
-        // industry about DATA_INC and DATA_DEC as to wether they adjust DATA_MSB or DATA_LSB. For KBP4 we will
-        // ignore LSB, INC and DEC. -EB
-        uchar *param_MSB;
-        uchar *param_LSB;
-        int paramNum;
+        switch (cc)
+        {
 
-        if (RPNorNRPN == RPN)
-        {
-            param_MSB = &RPN_MSB[chan];
-            param_LSB = &RPN_LSB[chan];
-            paramNum = (*param_MSB << 7) | *param_LSB;
-        }
-        else // NRPN
-        {
-            param_MSB = &NRPN_MSB[chan];
-            param_LSB = &NRPN_LSB[chan];
-            paramNum = (*param_MSB << 7) | *param_LSB;
+            // RPNs are a 14bit address/parameters (CC100 and CC101) with a 14bit data value (CC6 and CC38). RPNs are defined by the MIDI association
+            // and must be used according to the various specifications and profiles that define them.
+
+            // NRPNs are manufacturer defined and can be used for pretty much anything. They use CC98 and CC99 for address/parameters.
+
+            // There is some confusion about DATA_INC and DATA_DEC as to whether they adjust DATA_MSB or DATA_LSB. In this implementation we
+            // will apply them to the data LSB.
+
+            // We are assuming that the data MSB will be always be sent prior to the data LSB, and will only process data when data LSB is received.
+            // This avoids potential zippering of values, and is increasingly the more common useage.
+
+            // The MIDI 2.0 MPE Profile requires this method when sending 14 bit RPN data.
+
+            case MIDI_CC_RPN_LSB:
+            {
+                RPN_LSB[chan] = val;
+                paramMode = MODE_RPN;
+                break;
+            }
+
+            case MIDI_CC_RPN_MSB:
+            {
+                RPN_MSB[chan] = val;
+                paramMode = MODE_RPN;
+                break;
+            }
+
+            case MIDI_CC_NRPN_LSB:
+            {
+                NRPN_LSB[chan] = val;
+                paramMode = MODE_NRPN;
+                break;
+            }
+
+            case MIDI_CC_NRPN_MSB:
+            {
+                NRPN_MSB[chan] = val;
+                paramMode = MODE_NRPN;
+                break;
+            }
+
+            case MIDI_CC_DATA_MSB:
+            {
+                if (paramMode == MODE_RPN)
+                {
+                    RPN_DATA_MSB[chan] = val; // wait for LSB
+                }
+                else if (paramMode == MODE_NRPN)
+                {
+                    NRPN_DATA_MSB[chan] = val; // wait for LSB
+                }
+                break;
+            }
+
+            // when we receive the LSB, we then emit the data
+            case MIDI_CC_DATA_LSB:
+            {
+                if (paramMode == MODE_RPN)
+                {
+                    RPN_DATA_LSB[chan] = val;
+                    emit signalRxMidi_RPN(chan, (RPN_MSB[chan] << 7) | (RPN_LSB[chan]), (RPN_DATA_MSB[chan] << 7) | (RPN_DATA_LSB[chan]));
+                }
+                else if (paramMode == MODE_NRPN)
+                {
+                    NRPN_DATA_LSB[chan] = val;
+                    emit signalRxMidi_NRPN(chan, (NRPN_MSB[chan] << 7) | (NRPN_LSB[chan]), (NRPN_DATA_MSB[chan] << 7) | (NRPN_DATA_LSB[chan]));
+                }
+                break;
+            }
+
+            case MIDI_CC_DATA_INC:
+            {
+                if (paramMode == MODE_RPN && RPN_DATA_LSB[chan] < 0xFF)
+                {
+                    RPN_DATA_LSB[chan]++;
+                    emit signalRxMidi_RPN(chan, (RPN_MSB[chan] << 7) | (RPN_LSB[chan]), (RPN_DATA_MSB[chan] << 7) | (RPN_DATA_LSB[chan]));
+                }
+                else if (paramMode == MODE_NRPN && NRPN_DATA_LSB[chan] < 0xFF)
+                {
+                    NRPN_DATA_LSB[chan]++;
+                    emit signalRxMidi_NRPN(chan, (NRPN_MSB[chan] << 7) | (NRPN_LSB[chan]), (NRPN_DATA_MSB[chan] << 7) | (NRPN_DATA_LSB[chan]));
+                }
+                break;
+            }
+
+            case MIDI_CC_DATA_DEC:
+            {
+                if (paramMode == MODE_RPN && RPN_DATA_LSB[chan] > 0)
+                {
+                    RPN_DATA_LSB[chan]--;
+                    emit signalRxMidi_RPN(chan, (RPN_MSB[chan] << 7) | (RPN_LSB[chan]), (RPN_DATA_MSB[chan] << 7) | (RPN_DATA_LSB[chan]));
+                }
+                else if (paramMode == MODE_NRPN && NRPN_DATA_LSB[chan] > 0)
+                {
+                    NRPN_DATA_LSB[chan]--;
+                    emit signalRxMidi_NRPN(chan, (NRPN_MSB[chan] << 7) | (NRPN_LSB[chan]), (NRPN_DATA_MSB[chan] << 7) | (NRPN_DATA_LSB[chan]));
+                }
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
         }
 
-        switch(cc)
-        {
-        case MIDI_CC_NRPN_LSB:
-            *param_LSB = val;
-            RPNorNRPN = NRPN;
-            break;
-        case MIDI_CC_NRPN_MSB:
-            *param_MSB = val;
-            RPNorNRPN = RPN;
-            break;
-        case MIDI_CC_RPN_LSB:
-            *param_LSB = val;
-            RPNorNRPN = NRPN;
-            break;
-        case MIDI_CC_RPN_MSB:
-            *param_MSB = val;
-            RPNorNRPN = RPN;
-            break;
-        case MIDI_CC_DATA_MSB:
-            slotRxParam(paramNum, val, chan, DATA_MSB); // set data MSB
-            break;
-        case MIDI_CC_DATA_LSB:
-            slotRxParam(paramNum, val, chan, DATA_LSB); // set data LSB
-            break;
-        case MIDI_CC_DATA_INC:
-            slotRxParam(paramNum, val, chan, DATA_INC); // should be +1, ignore val
-            break;
-        case MIDI_CC_DATA_DEC:
-            slotRxParam(paramNum, val, chan, DATA_DEC); // should be -1, ignore val
-            break;
-        // end reserved CCs
-        default:
-            emit signalRxMidi_controlChange(chan, cc, val);
-            break;
-        }
         break; // end CCs
 
     case MIDI_PROG_CHANGE:
@@ -1572,18 +1623,6 @@ void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
     case MIDI_RT_RESET:
         emit signalRxMidi_SysReset();
         break;
-    }
-}
-
-void MidiDeviceManager::slotRxParam(int param, uchar val, uchar chan, uchar messagetype)
-{
-    if (RPNorNRPN == RPN)
-    {
-        emit signalRxMidi_RPN(chan, param, val, messagetype);
-    }
-    else
-    {
-        emit signalRxMidi_NRPN(chan, param, val, messagetype);
     }
 }
 
