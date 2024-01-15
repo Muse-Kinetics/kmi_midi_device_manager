@@ -67,6 +67,7 @@ void pedalCal::slotDisconnectElements()
 
 void pedalCal::slotSetDefaultValues()
 {
+    qDebug() << "PedalCal slotSetDefaultValues called";
     calMin = 50;
     calMax = 233;
     ui->dropdown_table->setCurrentIndex(0);
