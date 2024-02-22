@@ -151,6 +151,10 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 //    connect(this, SIGNAL(signalBeginFwTimer()), this, SLOT(slotBeginFwTimer()));
 //    connect(this, SIGNAL(signalStopGlobalTimer()), this, SLOT(slotStopGlobalTimer()));
 
+    // Configure the timer
+    midiSendTimer.setInterval(1); // Set interval to 1 ms
+    connect(&midiSendTimer, &QTimer::timeout, this, &MidiDeviceManager::slotEmptyMIDIBuffer);
+
     if (PID != PID_AUX)
     {
         slotStartPolling(objectName);
@@ -336,6 +340,7 @@ bool MidiDeviceManager::slotOpenMidiOut()
         /* Return the error */
         DM_OUT << "OPEN MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
         port_out_open = false;
+        midiSendTimer.stop();
         portName_in = "";
         connected = false;
         bootloaderMode = false;
@@ -345,6 +350,8 @@ bool MidiDeviceManager::slotOpenMidiOut()
     }
     portName_out = kmiPorts->getOutPortName(port_out);
     port_out_open = true;
+    slotInitNRPN(); // zero out previous paramaters sent/received
+    midiSendTimer.start();
 
     if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
     {
@@ -428,6 +435,7 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 
     bootloaderMode = false;
     port_out_open = false;
+    midiSendTimer.stop();
     portName_out = "";
 
     // alert host application that we are disconnected
@@ -524,6 +532,7 @@ bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
     {
         DM_OUT << "openVirtualOutPort error:" << (QString::fromStdString(error.getMessage()));
         port_out_open = false;
+        midiSendTimer.stop();
         portName_in = "";
         connected = false;
         bootloaderMode = false;
@@ -533,6 +542,7 @@ bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
     }
     portName_out = portName;
     port_out_open = true;
+    midiSendTimer.start();
     connected = true;
     emit signalConnected(true);
     return 1;
@@ -567,20 +577,6 @@ void MidiDeviceManager::slotStartPolling(QString caller)
     //versionPoller = new QTimer(this);
     connect(versionPoller, SIGNAL(timeout()), this, SLOT(slotPollVersion()));
 
-//    // some devices take longer to boot up
-//    if (deviceName == "12 Step")
-//    {
-//        pollTime = 4000;
-//    }
-//    else if (deviceName == "SSCOM" || deviceName == "SoftStep" || deviceName == "SoftStep Bootloader")
-//    {
-//        pollTime = 4000;
-//    }
-//    else
-//    {
-//        pollTime = 2000;
-//    }
-//    //versionPoller->start(pollTime);
     versionPoller->setInterval(pollTime);
 
     //pollingStatus = true; // allow polling to proceed
@@ -1241,6 +1237,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
 }
 
+
+
 bool MidiDeviceManager::slotOpenFirmwareFile(QString filePath)
 {
     DM_OUT << "slotOpenFirmwareFile called, file: " << filePath;
@@ -1319,9 +1317,6 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4 newStatus: %5").arg(status).arg(d1).arg(d2).arg(chan).arg(newStatus);
 //#endif
 
-    std::vector<uchar> packet;
-    packet.clear();
-
     if (ioGate == false)
     {
         DM_OUT << "ioGate stopped an incomming MIDI message - status:" << status;
@@ -1342,16 +1337,13 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     case MIDI_PITCH_BEND:
         if ((chan != 255 && chan > 127) || d1 > 127 || d2 > 127) return; // catch bad data
         //DM_OUT << QString("packet: status: %1 d1: %2 d2: %3").arg(newStatus).arg(d1).arg(d2);
-        packet.push_back(newStatus);
-        packet.push_back(d1);
-        packet.push_back(d2);
+        packet.insert(packet.end(), {newStatus, d1, d2});
         break;
     // two byte packets
     case MIDI_PROG_CHANGE:
     case MIDI_CHANNEL_PRESSURE:
         if ((chan != 255 && chan > 127) || d1 > 127) return; // catch bad data
-        packet.push_back(newStatus);
-        packet.push_back(d1);
+        packet.insert(packet.end(), {newStatus, d1});
         break;
     default:
 
@@ -1367,15 +1359,12 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
         case MIDI_MTC:
         case MIDI_SONG_POSITION:
             if (d1 > 127 || d2 > 127) return; // catch bad data
-            packet.push_back(newStatus);
-            packet.push_back(d1);
-            packet.push_back(d2);
+            packet.insert(packet.end(), {newStatus, d1, d2});
             break;
         // two byte packets
         case MIDI_SONG_SELECT:
             if (d1 > 127) return; // catch bad data
-            packet.push_back(newStatus);
-            packet.push_back(d1);
+            packet.insert(packet.end(), {newStatus, d1});
             break;
         // single byte packets
         case MIDI_TUNE_REQUEST:
@@ -1394,9 +1383,9 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
         } // end switch (sysCommon)
     } // end switch (status)
 
-#ifdef MDM_DEBUG_ENABLED
+//#ifdef MDM_DEBUG_ENABLED
     if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;
-#endif
+//#endif
 
     if (port_out_open == false)
     {
@@ -1404,20 +1393,114 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
         return; // handler doesn't exist
     }
 
-    // prepare and send the packet
-    try
+    if (packet.size() > MAX_MIDI_PACKET_SIZE)
     {
-        //DM_OUT << "RAW packet: " << packet;
-        midi_out->sendMessage( &packet );
-    }
-    catch (RtMidiError &error)
-    {
-        QString errorString = QString("MIDI SEND ERR: %1 \nStatus: %2").arg(QString::fromStdString(error.getMessage()), QString::number(status));
-        DM_OUT << errorString;
-        emit signalFwConsoleMessage(errorString);
+        slotEmptyMIDIBuffer();
     }
 }
 
+void MidiDeviceManager::slotEmptyMIDIBuffer()
+{
+    std::vector<uchar> message;
+
+    if (packet.size() == 0)
+    {
+        return;
+    }
+
+    for (size_t i = 0; i < packet.size(); ++i)
+    {
+        // Check if the current byte is a status byte
+        if (packet[i] >= 0x80)
+        {
+            // If there's already a message being constructed, send it
+            if (!message.empty())
+            {
+                try
+                {
+                    //DM_OUT << "RAW packet: " << packet;
+                    midi_out->sendMessage( &message );
+                }
+                catch (RtMidiError &error)
+                {
+                    QString errorString = QString("MIDI SEND PACKET ERR: %1 \n Size: %2").arg(QString::fromStdString(error.getMessage()), QString::number(packet.size()));
+                    DM_OUT << errorString;
+                    emit signalFwConsoleMessage(errorString);
+                }
+                message.clear(); // Clear the message vector for the next message
+            }
+        }
+
+        // Add the current byte to the message
+        message.push_back(packet[i]);
+
+        // If it's the last byte but not a status byte, ensure the message is sent
+        if (i == packet.size() - 1 && !message.empty())
+        {
+            try
+            {
+                //DM_OUT << "RAW packet: " << packet;
+                midi_out->sendMessage( &message );
+            }
+            catch (RtMidiError &error)
+            {
+                QString errorString = QString("MIDI SEND PACKET ERR: %1 \n Size: %2").arg(QString::fromStdString(error.getMessage()), QString::number(packet.size()));
+                DM_OUT << errorString;
+                emit signalFwConsoleMessage(errorString);
+            }
+        }
+    }
+
+    // Clear the packet after processing all messages
+    packet.clear();
+}
+
+void MidiDeviceManager::slotInitNRPN()
+{
+    for (int i = 0; i < NUM_MIDI_CHANNELS; i++)
+    {
+        // rx
+        RPN_MSB[i] = 255;
+        RPN_LSB[i] = 255;
+        NRPN_MSB[i] = 255;
+        NRPN_LSB[i] = 255;
+        RPN_DATA_MSB[i] = 0;
+        RPN_DATA_LSB[i] = 0;
+        NRPN_DATA_MSB[i] = 0;
+
+        LAST_SENT_NRPN[i] = 16384; // hopefully we never use this parameter #
+    }
+}
+
+void MidiDeviceManager::slotSendMIDI_NRPN(int parameter_number, int value, uchar channel)
+{
+    qDebug() << "slotSendMIDI_NRPN called parameter_number: " << parameter_number << " value: " << value << " channel: " << channel;
+    uint8_t param_msb, param_lsb, val_msb, val_lsb;
+
+    if (channel & 0xF0) // check for bad values
+    {
+        return;
+    }
+
+    val_msb   = (value  >> 7) & 0x7F;
+    val_lsb   =  value        & 0x7F;
+
+    //***  SEND PARAMETER NUMBER ON CHANGE  ***
+    if(parameter_number != LAST_SENT_NRPN[channel])
+    {
+        LAST_SENT_NRPN[channel] = parameter_number;
+
+        param_msb = (parameter_number >> 7) & 0x7F;
+        param_lsb =  parameter_number       & 0x7F;
+
+        slotSendMIDI(MIDI_CONTROL_CHANGE, MIDI_CC_NRPN_MSB, param_msb, channel);
+        slotSendMIDI(MIDI_CONTROL_CHANGE, MIDI_CC_NRPN_LSB, param_lsb, channel);
+    }
+
+    //***  SEND VALUE  ***
+    slotSendMIDI(MIDI_CONTROL_CHANGE, MIDI_CC_DATA_MSB, val_msb, channel);
+    slotSendMIDI(MIDI_CONTROL_CHANGE, MIDI_CC_DATA_LSB, val_lsb, channel);
+}
 
 void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
 {

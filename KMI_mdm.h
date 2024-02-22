@@ -23,6 +23,7 @@
 
 #include "RtMidi.h"
 #include "kmi_ports.h"
+#include "midi.h"
 
 typedef enum
 {
@@ -152,6 +153,10 @@ public:
     // stops MIDI if sysex is sending
     bool ioGate;
 
+#define MAX_MIDI_PACKET_SIZE 64
+    std::vector<uchar> packet; // packet to stuff outgoing midi packets into (not sysex)
+    QTimer midiSendTimer;
+
     QDialog* errDialog;
 
     //------ Rx MIDI Parameter Address Variables
@@ -165,6 +170,10 @@ public:
     uchar RPN_DATA_LSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     uchar NRPN_DATA_MSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     uchar NRPN_DATA_LSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+    //----- TX MIDI Parameter Data Variables
+    uint16_t LAST_SENT_RPN[NUM_MIDI_CHANNELS];
+    uint16_t LAST_SENT_NRPN[NUM_MIDI_CHANNELS];
 
     PARAM_MODE paramMode = MODE_UNDEF;
 
@@ -264,6 +273,11 @@ public slots:
     void slotSendMIDI(uchar status, uchar d1);
     void slotSendMIDI(uchar status, uchar d1, uchar d2);
     void slotSendMIDI(uchar status, uchar d1, uchar d2, uchar chan);
+
+    void slotEmptyMIDIBuffer();
+
+    void slotInitNRPN();
+    void slotSendMIDI_NRPN(int parameter_number, int value, uchar channel);
 
     void slotParsePacket(QByteArray packetArray);
 

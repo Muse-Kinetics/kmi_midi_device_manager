@@ -3,6 +3,7 @@
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #include "pedalcal.h"
 #include "ui_pedalcal.h"
+#include <QKeyEvent>
 
 const unsigned char table_Logarithmic[] = {0,3,7,10,13,16,19,22,24,27,29,32,34,36,38,40,42,43,45,47,49,50,52,53,55,56,58,59,60,62,63,64,65,67,68,69,70,71,72,73,74,75,76,77,78,79,81,81,82,83,84,85,85,86,87,88,89,89,90,91,92,92,93,94,95,95,96,97,97,98,99,99,100,101,101,102,103,103,104,104,105,106,106,107,107,108,108,109,110,110,111,111,112,112,113,113,114,114,115,115,116,116,117,117,118,118,119,119,119,120,120,121,121,122,122,123,123,123,124,124,125,125,125,126,126,127,127,127};
 const unsigned char table_Sin[] = {0,0,0,0,0,0,0,0,1,1,1,2,2,3,3,4,4,5,6,6,7,8,9,10,10,11,12,13,14,15,16,17,19,20,21,22,23,24,26,27,28,30,31,32,34,35,37,38,40,41,43,44,46,47,49,50,52,53,55,56,58,60,61,63,64,66,67,69,71,72,74,75,77,78,80,81,83,84,86,87,89,90,92,93,95,96,97,99,100,101,103,104,105,106,107,108,110,111,112,113,114,115,116,117,117,118,119,120,121,121,122,123,123,124,124,125,125,126,126,126,127,127,127,127,127,127,127,127};
@@ -25,8 +26,12 @@ pedalCal::pedalCal(QWidget *parent) :
     ui(new Ui::pedalCal)
 {
     ui->setupUi(this);
+
+    this->setWindowTitle("Expression Pedal Calibration");
     slotConnectElements();
     slotSetDefaultValues();
+
+    this->installEventFilter(this);
 }
 
 pedalCal::~pedalCal()
@@ -40,6 +45,28 @@ void pedalCal::closeEvent(QCloseEvent *event)
     qDebug() << "pedalCal closeEvent";
     emit signalWindowClosed();
     QWidget::closeEvent(event);
+}
+
+bool pedalCal::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress)
+    {
+        QKeyEvent *keyEvent = (QKeyEvent*)event;
+
+        if ((keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Escape))
+        {
+            qDebug() << "clear focus";
+            ui->no_focus->setFocus();
+            if (keyEvent->key() == Qt::Key_Escape)
+            {
+                emit signalWindowClosed();
+                return QObject::eventFilter(obj,event); // still process the eevent
+            }
+            return true; // Indicate the event has been handled
+        }
+    }
+
+    return QObject::eventFilter(obj,event);
 }
 
 void pedalCal::slotConnectElements()

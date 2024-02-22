@@ -12,6 +12,26 @@
 
 */
 
+enum MIDI_CHANNELS
+{
+    MIDI_CH_1,		// 0
+    MIDI_CH_2,
+    MIDI_CH_3,
+    MIDI_CH_4,
+    MIDI_CH_5,
+    MIDI_CH_6,
+    MIDI_CH_7,
+    MIDI_CH_8,
+    MIDI_CH_9,
+    MIDI_CH_10,
+    MIDI_CH_11,
+    MIDI_CH_12,
+    MIDI_CH_13,
+    MIDI_CH_14,
+    MIDI_CH_15,
+    MIDI_CH_16,
+    NUM_MIDI_CHANNELS // 16
+};
 
 #define	MIDI_NOTE_OFF			0x80
 #define	MIDI_NOTE_ON			0x90

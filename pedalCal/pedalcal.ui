@@ -354,7 +354,6 @@ QSlider::sub-page:vertical
    </property>
    <property name="font">
     <font>
-     <family>Futura PT</family>
      <pointsize>16</pointsize>
      <italic>false</italic>
      <bold>false</bold>
@@ -691,6 +690,20 @@ QComboBox::down-arrow
     <string>Save</string>
    </property>
   </widget>
+  <widget class="QLabel" name="no_focus">
+   <property name="geometry">
+    <rect>
+     <x>550</x>
+     <y>40</y>
+     <width>58</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>TextLabel</string>
+   </property>
+  </widget>
+  <zorder>no_focus</zorder>
   <zorder>bg_midde_slider</zorder>
   <zorder>slider_min</zorder>
   <zorder>slider_max</zorder>
