@@ -17,7 +17,7 @@
    <string notr="true">/**************LABEL**************/
 QLabel
 {
-	font: 16pt &quot;Futura PT&quot;;
+	font: 12pt &quot;Open Sans&quot;;
 	color: rgb(242, 242, 242);
 	background-color: transparent;
 }
@@ -28,7 +28,7 @@ QPushButton
 	background: rgb(60, 60, 60);
 	color: rgb(245, 245, 245);
 	border: 2px solid rgb(245, 245, 245);
-	font: 12pt &quot;Futura PT&quot;;
+	font: 10pt &quot;Open Sans&quot;;
 	padding: 0, 1, 0, 0;
 }
 
@@ -38,14 +38,14 @@ QPushButton:pressed
 	background: rgb(245, 245, 245);
 	color: rgb(60, 60, 60);
 	border: 2px solid rgb(245, 245, 245);
-	font: 12pt &quot;Futura PT&quot;;
+	font: 10pt &quot;Open Sans&quot;;
 	padding: 0, 1, 0, 0;
 }
 
 /*----------- QComboBox ------------*/
 QComboBox
 {
-	font: 12pt &quot;Futura PT&quot;;
+	font: 10pt &quot;Open Sans&quot;;
 	border: 2px solid rgb(245, 245, 245);
 	background: rgb(60, 60, 60);
 	color: rgb(242, 242, 242);
@@ -56,15 +56,24 @@ QComboBox QListView
 {
 	background-color: rgb(60, 60, 60);
 	border: transparent;
-	font: 12pt &quot;Futura PT&quot;;
+	font: 10pt &quot;Open Sans&quot;;
 	padding-left: 3px;
 	padding-right: 3px;
-	min-width: 70px;
+	min-width: 75px;
 }
 
 QComboBox QAbstractItemView
 {
-    min-width: 150px;
+    min-width: 75px;
+	icon-size: 0px;
+}
+
+QComboBox::down-arrow
+{
+	border: none;
+	background: none;
+	image: url(:/ui/ui_images/combobox_menu_arrows.svg);
+	padding-right: 15px;
 }
 
 QComboBox::item:alternate
@@ -101,7 +110,7 @@ QComboBox::drop-down
 
 QComboBox::disabled
 {
-	font: 12pt &quot;Futura PT&quot;;
+	font: 10pt &quot;Open Sans&quot;;
 	border: 2px solid rgb(100, 100, 100);
 	background: rgba(20, 20, 20, 100);
 	color: rgb(100, 100, 100);
@@ -111,6 +120,46 @@ QComboBox::disabled
 QComboBox::focus
 {
 	border: 2px solid rgb(0, 174, 239);
+}
+
+/* -------------- TEXTEDIT -------------------*/
+QTextEdit {
+    background-color: rgba(0,0,0,255);
+    color: white;
+    font: 10pt &quot;Open Sans&quot;;
+border: black;
+}
+
+/* -------------- Scroll Bar --------------- */
+
+QTextEdit QScrollBar:vertical {
+	background: black;
+/* margin sets up how far the handle can travel */
+	margin: 0px 0px 0px 0px;
+}
+
+/* Sets up the color and height of handle */
+QTextEdit QScrollBar::handle:vertical {
+	background: #444444;
+}
+
+/* This remvoes the bottom button by setting the height to 0px */
+QTextEdit QScrollBar::add-line:vertical {
+	height: 0px;
+	subcontrol-position: bottom;
+	subcontrol-origin: margin;
+}
+
+/* This remvoes the top button by setting the height to 0px */
+QTextEdit QScrollBar::sub-line:vertical {
+	height: 0px;
+	subcontrol-position: top;
+	subcontrol-origin: margin;
+}
+
+/* need this to get rid of crosshatching on scrollbar background */
+QTextEdit QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+	background: #222222;
 }
 </string>
   </property>
@@ -354,7 +403,8 @@ QSlider::sub-page:vertical
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <family>Open Sans</family>
+     <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
     </font>
@@ -381,7 +431,8 @@ border: 2px solid blue;</string>
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <family>Open Sans</family>
+     <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
     </font>
@@ -408,7 +459,8 @@ border: 2px solid white;</string>
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <family>Open Sans</family>
+     <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
     </font>
@@ -435,7 +487,8 @@ border: 2px solid rgb(0,255,0);</string>
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <family>Open Sans</family>
+     <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
     </font>
@@ -462,7 +515,8 @@ border: 2px solid red;</string>
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <family>Open Sans</family>
+     <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
     </font>
@@ -489,7 +543,8 @@ border: 2px solid white;</string>
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <family>Open Sans</family>
+     <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
     </font>
@@ -515,32 +570,17 @@ border: 2px solid rgb(0,255,0);</string>
     </rect>
    </property>
    <property name="styleSheet">
-    <string notr="true">QTextEdit {
-    background-color: rgba(0,0,0,255);
-    color: white;
-    font: 14px &quot;Futura-normal&quot;;
-border: black;
-}
-</string>
+    <string notr="true"/>
    </property>
    <property name="verticalScrollBarPolicy">
-    <enum>Qt::ScrollBarAlwaysOff</enum>
+    <enum>Qt::ScrollBarAsNeeded</enum>
    </property>
    <property name="html">
     <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Futura-normal'; font-size:14px; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;1. Plug in your expression pedal.&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;2. Adjust the expression pedal from heel to toe and observe the live values on the left slider. The middle slider adjusts the min and max thresholds, and the right slider shows the calibrated output value.&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;3. Put the expression pedal at the zero (heel) position. Adjust the min threshold (middle slider, bottom/blue handle) until the output slider value is zero.&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;4. Put the expression pedal at the max (toe) position. Adjust the max threshold (middle slider, top/red handle) until the output slider value is 127.&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;5. When satisfied, click [save] to send the calibration values to the device.&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Open Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;1. Plug in your expression pedal.&lt;br /&gt;&lt;br /&gt;2. Adjust the expression pedal from heel to toe and observe the live values on the left slider. The middle slider adjusts the min and max thresholds, and the right slider shows the calibrated output value.&lt;br /&gt;&lt;br /&gt;3. Put the expression pedal at the zero (heel) position. Adjust the min threshold (middle slider, bottom/blue handle) until the output slider value is zero.&lt;br /&gt;&lt;br /&gt;4. Put the expression pedal at the max (toe) position. Adjust the max threshold (middle slider, top/red handle) until the output slider value is 127.&lt;br /&gt;&lt;br /&gt;5. When satisfied, click [save] to send the calibration values to the device.&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_title">
@@ -554,6 +594,7 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="font">
     <font>
+     <family>Futura PT</family>
      <pointsize>18</pointsize>
      <italic>false</italic>
      <bold>false</bold>
@@ -590,19 +631,7 @@ p, li { white-space: pre-wrap; }
     <string>Sets the type of curve to &lt;br&gt;apply to incoming values. </string>
    </property>
    <property name="styleSheet">
-    <string notr="true">/*----------- QComboBox ------------*/
-QComboBox
-{
-
-}
-
-QComboBox::down-arrow
-{
-	border: none;
-	background: none;
-	image: url(:/ui/ui_images/combobox_menu_arrows.svg);
-	padding-right: 15px;
-}</string>
+    <string notr="true"/>
    </property>
    <item>
     <property name="text">

@@ -378,7 +378,7 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
     DM_OUT << "slotCloseMidiIn called, send disconnect signal: " << signal;
 
     // alert host application that we are disconnected
-    bootloaderMode = false;
+    //bootloaderMode = false;
     port_in_open = false;
     portName_in = "";
 
@@ -408,11 +408,13 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
             midi_in->cancelCallback();
             callbackIsSet = false;
         }
-//        DM_OUT << "deleting midi_in";
-//        delete midi_in;
-//        midi_in = new RtMidiIn();
 
-        //midi_in = nullptr;
+        if (bootloaderMode)
+        {
+            DM_OUT << "left bootloader, deleting/renewing midi_in";
+            delete midi_in;
+            midi_in = new RtMidiIn();
+        }
     }
     catch (RtMidiError &error)
     {
@@ -433,7 +435,7 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 {
     DM_OUT << "slotCloseMidiOut called, send disconnect signal: " << signal;
 
-    bootloaderMode = false;
+
     port_out_open = false;
     midiSendTimer.stop();
     portName_out = "";
@@ -455,10 +457,14 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
     {
         //close ports
         midi_out->closePort();
-//        DM_OUT << "deleting midi_out";
-//        delete midi_out;
-//        midi_out = new RtMidiOut();
-        //midi_out = nullptr;
+
+        if (bootloaderMode)
+        {
+            DM_OUT << "left bootloader, deleting/renewing midi_out";
+            delete midi_out;
+            midi_out = new RtMidiOut();
+            bootloaderMode = false;
+        }
     }
     catch (RtMidiError &error)
     {

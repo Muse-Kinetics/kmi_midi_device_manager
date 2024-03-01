@@ -10,6 +10,7 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QLineEdit>
+#include <QSettings>
 
 class kmiSpinBoxUpDown : public QSpinBox {
     Q_OBJECT
@@ -17,7 +18,7 @@ class kmiSpinBoxUpDown : public QSpinBox {
 public:
     explicit kmiSpinBoxUpDown(QWidget *parent = nullptr);
 
-
+    QSettings *sessionSettings;
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

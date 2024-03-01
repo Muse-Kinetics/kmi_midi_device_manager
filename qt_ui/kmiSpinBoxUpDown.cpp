@@ -5,14 +5,24 @@
 
 kmiSpinBoxUpDown::kmiSpinBoxUpDown(QWidget *parent) : QSpinBox(parent)
 {
+    sessionSettings = new QSettings(this);
+
     selectOnMousePress = false;
 
     QLineEdit *editor = this->findChild<QLineEdit *>("qt_spinbox_lineedit");
     editor->installEventFilter(this);
     this->installEventFilter(this);
 
-    QString spinBoxStyle = "QSpinBox{ font: 16pt \"Corbel\"; background-color: rgba(1, 1, 1, 100); color: red;} QAbstractSpinBox:focus{ background-color: rgba(60, 60, 60, 100); color: white; outline: none;}";
-    this->setStyleSheet(spinBoxStyle);
+#ifdef Q_OS_MAC
+    QString spinBoxStyle = "QSpinBox{ font: 14pt \"Open Sans\"; background-color: rgba(1, 1, 1, 100); color: red;} QAbstractSpinBox:focus{ background-color: rgba(60, 60, 60, 100); color: white; outline: none;}";
+
+#endif
+
+#ifdef Q_OS_WINDOWS
+    QString spinBoxStyle = "QSpinBox{ font: 10pt \"Open Sans\"; background-color: rgba(1, 1, 1, 100); color: red;} QAbstractSpinBox:focus{ background-color: rgba(60, 60, 60, 100); color: white; outline: none;}";
+#endif
+
+        this->setStyleSheet(spinBoxStyle);
     setupButtons();
 }
 
@@ -21,10 +31,10 @@ void kmiSpinBoxUpDown::setupButtons() {
     setButtonSymbols(QAbstractSpinBox::NoButtons);
 
     // setup icons
-    iconUpButton = ":/ui/ui_images/arrow-up.svg";
-    iconUpButtonPressed = ":/ui/ui_images/arrow-up_pressed.svg";
-    iconDownButton = ":/ui/ui_images/arrow-down.svg";
-    iconUDownButtonPressed = ":/ui/ui_images/arrow-down_pressed.svg";
+    iconUpButton = ":/ui/ui_images/arrow-up_pressed.svg";
+    iconUpButtonPressed = ":/ui/ui_images/arrow-up.svg";
+    iconDownButton = ":/ui/ui_images/arrow-down_pressed.svg";
+    iconUDownButtonPressed = ":/ui/ui_images/arrow-down.svg";
 
     // Create custom up and down buttons
     upButton = new QPushButton(this);
@@ -43,9 +53,9 @@ void kmiSpinBoxUpDown::setupButtons() {
 
 
     // Adjust button sizes and icons as needed
-#define BUTTON_WIDTH 10
-#define BUTTON_HEIGHT 10
-#define BUTTON_PADDING_RIGHT 8
+#define BUTTON_WIDTH 9
+#define BUTTON_HEIGHT 9
+#define BUTTON_PADDING_RIGHT 6
 #define BUTTON_GAP  1
     QString buttonStyle = "border:none; background-color:rgba(0,0,0,0);";
 
@@ -57,20 +67,9 @@ void kmiSpinBoxUpDown::setupButtons() {
     // Connect signals to slots for increasing and decreasing value
     connect(upButton, &QPushButton::clicked, this, [this]() { setValue(value() + singleStep()); });
     connect(downButton, &QPushButton::clicked, this, [this]() { setValue(value() - singleStep()); });
+
 }
 
-//void kmiSpinBoxUpDown::keyPressEvent(QKeyEvent *e)
-//{
-//    if(this->specialValueText() == "off" && e->key() == Qt::Key_O)
-//    {
-//        this->setValue(-1);
-//        this->selectAll();
-//    }
-//    else
-//    {
-//        QSpinBox::keyPressEvent(e);
-//    }
-//}
 
 void kmiSpinBoxUpDown::focusInEvent(QFocusEvent *e)
 {
@@ -83,40 +82,50 @@ void kmiSpinBoxUpDown::focusInEvent(QFocusEvent *e)
 
 bool kmiSpinBoxUpDown::eventFilter(QObject *obj, QEvent *event)
 {
+    bool toolTipsEnabled = sessionSettings->value("toolTipsEnabled").toBool();
+
+    if(event->type() == QEvent::ToolTip)
+    {
+        if (!toolTipsEnabled)
+        {
+            //qDebug() << "spinbox tooltip suppresed";
+            return true;
+        }
+        else
+        {
+            //qDebug() << "spinbox tooltip allowed";
+            return QObject::eventFilter(obj, event);
+        }
+    }
+
     int stepMultiplier = 1; // Default step multiplier
 
     if(event->type() == QMouseEvent::MouseButtonPress)
     {
-        qDebug() << "mouse event";
+        //qDebug() << "mouse event";
         if(selectOnMousePress)
         {
-            qDebug() << "select all";
+            //qDebug() << "select all";
             this->selectAll();
             selectOnMousePress = false;
             return true;
         }
     }
-    if (event->type() == QEvent::KeyPress) {
+    if (event->type() == QEvent::KeyPress)
+    {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
-        qDebug() << "kmiSpinBoxUpDown key press";
+        //qDebug() << "kmiSpinBoxUpDown key press";
 
-        // Handle Enter, Tab, and Escape keys
-//        if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Escape) {
-//            changeFocus();
-//            return true; // Event handled
-//        }
 
-        // Handle Up and Down arrow keys with modifiers
-        //qDebug() << "Modifiers:" << keyEvent->modifiers();
 
         if (keyEvent->modifiers() & Qt::ShiftModifier)
         {
-            qDebug() << "shift modifier";
+            //qDebug() << "shift modifier";
             stepMultiplier = stepMultiplier * 10;
         }
 
         if (keyEvent->modifiers() & Qt::ControlModifier) {
-            qDebug() << "control modifier";
+            //qDebug() << "control modifier";
             // This block will execute for Control key on Windows, and command key on MacOS
             stepMultiplier = stepMultiplier * 10;
         }

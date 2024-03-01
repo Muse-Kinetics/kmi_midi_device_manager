@@ -7,6 +7,9 @@
 #include "midi.h"
 #include "KMI_DevData.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // ************************************************
 // SysEx Messages
@@ -77,4 +80,9 @@ extern unsigned char _bl_quneo[18];
 
 
 // *********************************************************
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

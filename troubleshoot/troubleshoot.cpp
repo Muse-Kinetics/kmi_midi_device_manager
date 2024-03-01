@@ -98,10 +98,10 @@ troubleshoot::troubleshoot(QWidget *parent, QString initDeviceName, QString init
 
 
     qDebug() << "thisPosition - x: " << posX << " y: " << posY;
-//    if (posY < 0)
-//    {
-//        posY = 0;
-//    }
+    if (posY < 0)
+    {
+        posY = 0;
+    }
 
     this->move(posX+1, posY+1);
 }

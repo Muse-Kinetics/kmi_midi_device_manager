@@ -4,6 +4,7 @@
 #include "pedalcal.h"
 #include "ui_pedalcal.h"
 #include <QKeyEvent>
+#include <QFile>
 
 const unsigned char table_Logarithmic[] = {0,3,7,10,13,16,19,22,24,27,29,32,34,36,38,40,42,43,45,47,49,50,52,53,55,56,58,59,60,62,63,64,65,67,68,69,70,71,72,73,74,75,76,77,78,79,81,81,82,83,84,85,85,86,87,88,89,89,90,91,92,92,93,94,95,95,96,97,97,98,99,99,100,101,101,102,103,103,104,104,105,106,106,107,107,108,108,109,110,110,111,111,112,112,113,113,114,114,115,115,116,116,117,117,118,118,119,119,119,120,120,121,121,122,122,123,123,123,124,124,125,125,125,126,126,127,127,127};
 const unsigned char table_Sin[] = {0,0,0,0,0,0,0,0,1,1,1,2,2,3,3,4,4,5,6,6,7,8,9,10,10,11,12,13,14,15,16,17,19,20,21,22,23,24,26,27,28,30,31,32,34,35,37,38,40,41,43,44,46,47,49,50,52,53,55,56,58,60,61,63,64,66,67,69,71,72,74,75,77,78,80,81,83,84,86,87,89,90,92,93,95,96,97,99,100,101,103,104,105,106,107,108,110,111,112,113,114,115,116,117,117,118,119,120,121,121,122,123,123,124,124,125,125,126,126,126,127,127,127,127,127,127,127,127};
@@ -25,13 +26,89 @@ pedalCal::pedalCal(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::pedalCal)
 {
+    sessionSettings = new QSettings(this);
+
     ui->setupUi(this);
+    this->setFixedSize(640,369);
 
     this->setWindowTitle("Expression Pedal Calibration");
     slotConnectElements();
     slotSetDefaultValues();
 
     this->installEventFilter(this);
+
+    // styles etc
+
+    QPalette palette;
+
+    qDebug() << "set pedalCal palette";
+
+    // Set palette colors based on your stylesheet
+    palette.setColor(QPalette::Window, QColor(10, 10, 10, 90)); // For QWidget background
+    palette.setColor(QPalette::ButtonText, Qt::white); // For QPushButton text color
+    palette.setColor(QPalette::Button, QColor(60, 60, 60)); // For QPushButton background
+    palette.setColor(QPalette::WindowText, QColor(242, 242, 242)); // For QLabel text color
+
+    this->setPalette(palette);
+
+#ifdef Q_OS_MAC
+
+    QString textEditHTML = R"(
+        <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+        <html>
+        <head>
+            <meta name="qrichtext" content="1" />
+            <meta charset="utf-8" />
+            <style type="text/css">
+                p, li { white-space: pre-wrap; }
+            </style>
+        </head>
+        <body style="font-family:'Open Sans'; font-size:10pt; font-weight:400; font-style:normal;">
+            <p style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">
+                <span style="font-size:11pt;">
+                    1. Plug in your expression pedal.<br /><br />
+                    2. Adjust the expression pedal from heel to toe and observe the live values on the left slider. The middle slider adjusts the min and max thresholds, and the right slider shows the calibrated output value.<br /><br />
+                    3. Put the expression pedal at the zero (heel) position. Adjust the min threshold (middle slider, bottom/blue handle) until the output slider value is zero.<br /><br />
+                    4. Put the expression pedal at the max (toe) position. Adjust the max threshold (middle slider, top/red handle) until the output slider value is 127.<br /><br />
+                    5. When satisfied, click [save] to send the calibration values to the device.<br />
+                </span>
+            </p>
+        </body>
+        </html>
+        )";
+
+
+    QFile *pedalStyleFile = new QFile(":/inc/KMI_KMDM/pedalCal/pedalCalStlyesMac.qss");
+#else // windows/linux
+
+    QString textEditHTML = R"(
+        <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+        <html>
+        <body style="font-family:'Open Sans'; font-size:10pt; font-weight:400; font-style:normal;">
+                    1. Plug in your expression pedal.<br /><br />
+                    2. Adjust the expression pedal from heel to toe and observe the live values on the left slider. The middle slider adjusts the min and max thresholds, and the right slider shows the calibrated output value.<br /><br />
+                    3. Put the expression pedal at the zero (heel) position. Adjust the min threshold (middle slider, bottom/blue handle) until the output slider value is zero.<br /><br />
+                    4. Put the expression pedal at the max (toe) position. Adjust the max threshold (middle slider, top/red handle) until the output slider value is 127.<br /><br />
+                    5. When satisfied, click [save] to send the calibration values to the device.<br />
+
+        </body>
+        </html>
+        )";
+
+    QFile *pedalStyleFile = new QFile(":/inc/KMI_KMDM/pedalCal/pedalCalStylesWin.qss");
+#endif
+
+    ui->text_instructions->setHtml(textEditHTML);
+
+    if (!pedalStyleFile->open(QFile::ReadOnly))
+    {
+        qDebug() << "Error opening pedalCal stylesheet";
+    }
+    QString pedalStyleString = QLatin1String(pedalStyleFile->readAll());
+
+    qDebug() << "set pedalCal stylesheet";
+
+    this->setStyleSheet(pedalStyleString);
 }
 
 pedalCal::~pedalCal()
@@ -49,6 +126,22 @@ void pedalCal::closeEvent(QCloseEvent *event)
 
 bool pedalCal::eventFilter(QObject *obj, QEvent *event)
 {
+    bool toolTipsEnabled = sessionSettings->value("toolTipsEnabled").toBool();
+
+    if(event->type() == QEvent::ToolTip)
+    {
+        if (!toolTipsEnabled)
+        {
+            //qDebug() << "suppresed";
+            return true;
+        }
+        else
+        {
+            //qDebug() << "allowed";
+            return QObject::eventFilter(obj, event);
+        }
+    }
+
     if (event->type() == QEvent::KeyPress)
     {
         QKeyEvent *keyEvent = (QKeyEvent*)event;
@@ -178,7 +271,7 @@ void pedalCal::slotCalculateOutput()
     time a user saves/sends calibtation data, we write it to settings.json and thereafter
     we will load that data when the calibration window is loaded.
 */
-void pedalCal::slotLoadJSONCalibrationValues(QVariantMap settings, QVariantMap)
+void pedalCal::slotLoadJSONCalibrationValues(QVariantMap settings)
 {
     qDebug() << "pedalCal slotLoadJSONCalibrationValues called - pedal_calibration_min: " << settings.value("pedal_calibration_min").toInt();
     if (settings.value("pedal_calibration_min").isNull() == false)

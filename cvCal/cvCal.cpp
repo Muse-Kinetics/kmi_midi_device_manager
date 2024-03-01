@@ -3,57 +3,100 @@
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #include "cvCal.h"
 #include "ui_cvCal.h"
-#include <QSpinBox>
-#include <QKeyEvent>
-#include <QLineEdit>
-#include <kmiSpinBoxUpDown.h>
-#include <midi.h> // max midi channels
-#include <sysex.h> // packet types
+#include <QPalette>
+
 
 cvCal::cvCal(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::cvCal)
 {
+
+    sessionSettings = new QSettings(this);
+
     ui->setupUi(this);
     this->setWindowTitle("CV Calibration");
+    this->setFixedSize(800,370);
 
     this->installEventFilter(this);
+    ui->cv_cal_mode->installEventFilter(this);
 
     slotConnectElements();
     ui->no_focus->setFocus();
 
     nrpnChannel = MIDI_CH_10; // default nrpn channel for editor and firmware
 
-    foreach(kmiSpinBoxUpDown *spinBox, ui->tabWidget->findChildren<kmiSpinBoxUpDown *>())
+    // styles etc
+
+    QPalette palette;
+
+    qDebug() << "set cvCal palette";
+
+    // Set palette colors based on your stylesheet
+    palette.setColor(QPalette::Window, QColor(10, 10, 10, 90)); // For QWidget background
+    palette.setColor(QPalette::ButtonText, Qt::white); // For QPushButton text color
+    palette.setColor(QPalette::Button, QColor(60, 60, 60)); // For QPushButton background
+    palette.setColor(QPalette::WindowText, QColor(242, 242, 242)); // For QLabel text color
+
+    this->setPalette(palette);
+
+#ifndef Q_OS_MAC
+    QString textEditHTML = R"(
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+    <html>
+    <body style="font-family:'Open Sans'; font-size:9pt; font-weight:400; font-style:normal;">Each 12bit value (0-4095) is a scaling calibration value for the listed voltage. <br /><br />
+ To calibrate a voltage value, measure the CV out with a precision voltmeter, or connect it to a trusted oscillator and measure the pitches with a tuner. When you adjust a value, the CV is immediately updated so that it can be measured in real time. <br /><br />
+You can directly control the CVs with 12 bit values by using NRPN 1 for CV1, and NRPN 2 for CV2. <br /><br />
+    </body>
+    </html>
+    )";
+
+
+    cvStyleFile = new QFile(":/inc/KMI_KMDM/cvCal/cvCalStyleWin.qss");
+#else
+
+    QString textEditHTML = R"(
+    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+    <html>
+    <head>
+        <meta name="qrichtext" content="1" />
+        <meta charset="utf-8" />
+        <style type="text/css">
+            p, li { white-space: pre-wrap; }
+        </style>
+    </head>
+    <body style="font-family:'Open Sans'; font-size:11pt; font-weight:400; font-style:normal;">
+        <p style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">
+            Each 12bit value (0-4095) is a scaling calibration value for the listed voltage. <br /><br />
+            To calibrate a voltage value, measure the CV out with a precision voltmeter, or connect it to a trusted oscillator and measure the pitches with a tuner. When you adjust a value, the CV is immediately updated so that it can be measured in real time. <br /><br />
+            You can directly control the CVs with 12 bit values by using NRPN 1 for CV1, and NRPN 2 for CV2. <br /><br />
+        </p>
+    </body>
+    </html>
+    )";
+
+    cvStyleFile = new QFile(":/inc/KMI_KMDM/cvCal/cvCalStyleMac.qss");
+#endif
+
+    ui->text_instructions->setHtml(textEditHTML);
+
+    if (!cvStyleFile->open(QFile::ReadOnly))
     {
-        QString spinBoxStyle = "QSpinBox{ font: 12pt \"Corbel\"; background-color: rgba(1, 1, 1, 100); color: red;} QAbstractSpinBox:focus{ background-color: rgba(60, 60, 60, 100); color: white; outline: none;}";
-
-        spinBox->setStyleSheet(spinBoxStyle);
-
+        qDebug() << "Error opening cvCal stylesheet";
     }
+    cvStyleString = QLatin1String(cvStyleFile->readAll());
 
-         // TABS
-        #ifdef Q_OS_MAC
-     QString tabStyleString = QString("QTabWidget {}"
-                                   "QTabWidget::pane {border: 2px solid rgb(89, 89, 89);}"
-                                   "QTabWidget::tab-bar {left: 20px;}"
-                                   "QTabBar::tab {margin-left: 5; margin-right: 5; min-width: 100px; background-color: rgb(40, 40, 40); font: 14pt 'Futura PT'; color: rgb(242, 242, 242); border-left: 2px solid rgb(89, 89, 89); border-right: 2px solid rgb(89, 89, 89); border-top: 2px solid rgb(89, 89, 89); padding: 2px;}"
-                                   "QTabBar::tab:selected {background-color: rgb(89, 89, 89);}"
-                                   );
-        #else
-     QString tabStyleString = QString("QTabWidget {}"
-                                   "QTabWidget::pane {border: 2px solid rgb(89, 89, 89);}"
-                                   "QTabWidget::tab-bar {left: 20px;}"
-                                   "QTabBar::tab {margin-left: 5; margin-right: 5; min-width: 100px; background-color: rgb(40, 40, 40); font: 10pt 'Corbel'; color: rgb(242, 242, 242); border-left: 2px solid rgb(89, 89, 89); border-right: 2px solid rgb(89, 89, 89); border-top: 2px solid rgb(89, 89, 89); padding: 2px;}"
-                                   "QTabBar::tab:selected {background-color: rgb(89, 89, 89);}"
-                                   );
-        #endif
-     ui->tabWidget->setStyleSheet(tabStyleString);
+
+
+    qDebug() << "set cvCal stylesheet";
+    this->setStyleSheet(cvStyleString);
+
 }
 
 cvCal::~cvCal()
 {
+    slotDisconnectElements();
     delete ui;
+    qDebug() << "cvCal ui deleted";
 }
 
 void cvCal::closeEvent(QCloseEvent *event)
@@ -66,6 +109,23 @@ void cvCal::closeEvent(QCloseEvent *event)
 bool cvCal::eventFilter(QObject *obj, QEvent *event)
 {
     kmiSpinBoxUpDown *spinbox = qobject_cast<kmiSpinBoxUpDown *>(obj);
+    QComboBox *comboBox = qobject_cast<QComboBox *>(obj);
+
+    bool toolTipsEnabled = sessionSettings->value("toolTipsEnabled").toBool();
+
+    if(event->type() == QEvent::ToolTip)
+    {
+        if (!toolTipsEnabled)
+        {
+            //qDebug() << "suppresed";
+            return true;
+        }
+        else
+        {
+            //qDebug() << "allowed";
+            return QObject::eventFilter(obj, event);
+        }
+    }
 
     if (spinbox && event->type() == QEvent::FocusOut && spinbox->text().isEmpty())
     {
@@ -103,7 +163,8 @@ bool cvCal::eventFilter(QObject *obj, QEvent *event)
     {
         // Cast the QObject to QWidget to access the `inherits` method
         QWidget *widget = qobject_cast<QWidget *>(obj);
-        if (widget) {
+        if (widget && !comboBox)
+        {
             // Check if the widget is not a QSpinBox or QPushButton
             if (!widget->inherits("QSpinBox") && !widget->inherits("QPushButton"))
             {
@@ -139,6 +200,7 @@ void cvCal::slotConnectElements()
 
 void cvCal::slotDisconnectElements()
 {
+    qDebug() << "cvCal slotDisconnectElements called";
     foreach (kmiSpinBoxUpDown *spinbox, this->findChildren<kmiSpinBoxUpDown *>())
     {
         disconnect(spinbox, SIGNAL(valueChanged(int)), this, SLOT(slotValueChanged()));

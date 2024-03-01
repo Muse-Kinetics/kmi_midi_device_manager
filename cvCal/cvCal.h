@@ -4,12 +4,24 @@
 #ifndef CVCAL_H
 #define CVCAL_H
 
+#include <QWidget>
 #include <QDialog>
-#include <sysexcmds.h>
-#include <cvCalData.h>
+
 #include <QTableWidget>
 #include <QLineEdit>
 #include <QIntValidator>
+#include <QFile>
+#include <QSpinBox>
+#include <QKeyEvent>
+#include <QLineEdit>
+#include <QFile>
+#include <QSettings>
+
+#include <sysexcmds.h>
+#include <cvCalData.h>
+#include <kmiSpinBoxUpDown.h>
+#include <midi.h> // max midi channels
+#include <sysex.h> // packet types
 
 #define CURRENT_CV_CAL_VERSION 1
 
@@ -42,12 +54,17 @@ public:
 
     uint8_t nrpnChannel;
 
+    QSettings *sessionSettings;
+
     const QMap<QString, unsigned char> calModeMap =
     {
         {"Factory", 0},
         {"Octaves", 1},
         {"Notes", 2}
     };
+
+    QFile *cvStyleFile;
+    QString cvStyleString;
 
 signals:
     void signalWindowClosed();

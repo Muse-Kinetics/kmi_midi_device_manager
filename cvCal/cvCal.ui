@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>cvCal</class>
- <widget class="QDialog" name="cvCal">
+ <widget class="QWidget" name="cvCal">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>740</width>
+    <width>800</width>
     <height>370</height>
    </rect>
+  </property>
+  <property name="font">
+   <font/>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
@@ -16,95 +19,45 @@
   <property name="styleSheet">
    <string notr="true">
 
-/* ---------- QSpinBox ------------*/
-QSpinBox
+QFrame #widgetFrame
 {
-
-}
-
-
-QAbstractSpinBox:focus
-{
-
-}
-
-
-
-/**************LABEL**************/
-QLabel
-{
-
-}
-
-/*----------- QPushButton ------------*/
-QPushButton
-{
-
-}
-
-
-QPushButton:pressed
-{
-
-}
-
-</string>
-  </property>
-  <widget class="QLabel" name="no_focus">
-   <property name="geometry">
-    <rect>
-     <x>490</x>
-     <y>190</y>
-     <width>58</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-  </widget>
-  <widget class="QFrame" name="widgetFrame">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>740</width>
-     <height>370</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">
-
-QWidget #widgetFrame
-{
-	background-color: rgba(0, 0, 0, 90);
+        background-color: rgba(0, 0, 0, 90);
 }
 
 QWidget #CVOut1
 {
-	background-color: rgba(160, 160, 160, 50);
+        background-color: rgba(160, 160, 160, 50);
 }
 
 QWidget #CVOut2
 {
-	background-color: rgba(160, 160, 160, 50);
+        background-color: rgba(160, 160, 160, 50);
 }
 
 /* ---------- QSpinBox ------------*/
+
 QSpinBox
 {
-        font: 16pt &quot;Corbel&quot;;
+        font: 12pt &quot;Corbel&quot;;
         background-color: rgba(1, 1, 1, 100);
         color: red;
-       padding-left: 4px;
-		border: 1px solid rgb(100,0,0);
 
+       padding-left: 4px;
+                border: 1px solid rgb(100,0,0);
 }
+
+QAbstractSpinBox:focus
+{
+        background-color: rgba(60, 60, 60, 100);
+        color: white;
+        outline: none;
+}
+
 
 QSpinBox::up-button {
     width: 16px; /* Adjust size as needed */
     height: 9px; /* Adjust size as needed */
-	padding: 0 0;
+        padding: 0 0;
     subcontrol-origin: border;
     subcontrol-position: top right; /* Position can be adjusted if needed */
     image: url(:/ui/ui_images/arrow-up.svg);
@@ -133,49 +86,49 @@ QAbstractSpinBox:focus
 /**************LABEL**************/
 QLabel
 {
-	font: 16pt &quot;Futura PT&quot;;
-	color: rgb(242, 242, 242);
-	background-color: transparent;
+        font: 18pt &quot;Open Sans&quot;;
+        color: rgb(242, 242, 242);
+        background-color: transparent;
 }
 
 /*----------- QPushButton ------------*/
 QPushButton
 {
-	background: rgb(60, 60, 60);
-	color: rgb(245, 245, 245);
-	border: 2px solid rgb(245, 245, 245);
-	font: 12pt &quot;Futura PT&quot;;
-	padding: 0, 1, 0, 0;
+        background: rgb(60, 60, 60);
+        color: rgb(245, 245, 245);
+        border: 2px solid rgb(245, 245, 245);
+        font: 12pt &quot;Open Sans&quot;;
+        padding: 0, 1, 0, 0;
 }
 
 
 QPushButton:pressed
 {
-	background: rgb(245, 245, 245);
-	color: rgb(60, 60, 60);
-	border: 2px solid rgb(245, 245, 245);
-	font: 12pt &quot;Futura PT&quot;;
-	padding: 0, 1, 0, 0;
+        background: rgb(245, 245, 245);
+        color: rgb(60, 60, 60);
+        border: 2px solid rgb(245, 245, 245);
+        font: 12pt &quot;Open Sans&quot;;
+        padding: 0, 1, 0, 0;
 }
 
 /*----------- QComboBox ------------*/
 QComboBox
 {
-	font: 12pt &quot;Futura PT&quot;;
-	border: 2px solid rgb(245, 245, 245);
-	background: rgb(60, 60, 60);
-	color: rgb(242, 242, 242);
-	padding: 1px 3px 3px 8px;
+        font: 12pt &quot;Open Sans&quot;;
+        border: 2px solid rgb(245, 245, 245);
+        background: rgb(60, 60, 60);
+        color: rgb(242, 242, 242);
+        padding: 1px 1px 1px 9px;
  }
 
 QComboBox QListView
 {
-	background-color: rgb(60, 60, 60);
-	border: transparent;
-	font: 12pt &quot;Futura PT&quot;;
-	padding-left: 3px;
-	padding-right: 3px;
-	min-width: 35px;
+        background-color: rgb(60, 60, 60);
+        border: transparent;
+        font: 12pt &quot;Open Sans&quot;;
+        padding-left: 5px;
+        padding-right: 3px;
+        min-width: 35px;
 }
 
 QComboBox QAbstractItemView
@@ -185,51 +138,150 @@ QComboBox QAbstractItemView
 
 QComboBox::item:alternate
 {
-	background: rgb(90, 90, 90);
+        background: rgb(90, 90, 90);
 }
 
 QComboBox::item:selected
 {
-	border: 1px solid transparent;
-	background: rgb(0,174,239);
+        border: 1px solid transparent;
+        background: rgb(0,174,239);
 }
 
 QComboBox::indicator
 {
-	background-color: transparent;
-	selection-background-color: transparent;
-	color: transparent;
-	selection-color: white;
+        background-color: transparent;
+        selection-background-color: transparent;
+        color: transparent;
+        selection-color: white;
 }
 
 QComboBox::drop-down
 {
-	width: 1px;
-	height: 1px;
-	subcontrol-origin: margin;
-	subcontrol-position: right center;
-	border-left-width: 0px;
-	border-right-width: 0px;
-	border-top-width: 0px;
-	border-bottom-width: 0px;
-	padding: 1px 1px 1px 4px;
+        width: 1px;
+        height: 1px;
+        subcontrol-origin: margin;
+        subcontrol-position: right center;
+        border-left-width: 0px;
+        border-right-width: 0px;
+        border-top-width: 0px;
+        border-bottom-width: 0px;
+        padding: 1px 1px 1px 4px;
 }
 
 QComboBox::disabled
 {
-	font: 12pt &quot;Futura PT&quot;;
-	border: 2px solid rgb(100, 100, 100);
-	background: rgba(20, 20, 20, 100);
-	color: rgb(100, 100, 100);
-	padding: 1px 3px 1px 4px;
+        font: 12pt &quot;Open Sans&quot;;
+        border: 2px solid rgb(100, 100, 100);
+        background: rgba(20, 20, 20, 100);
+        color: rgb(100, 100, 100);
+        padding: 1px 3px 1px 4px;
 }
 
 QComboBox::focus
 {
-	border: 2px solid rgb(0, 174, 239);
+        border: 2px solid rgb(0, 174, 239);
 }
 
+QTabWidget {}
+
+QTabWidget::pane
+{
+    border: 2px solid rgb(89, 89, 89);
+}
+
+QTabWidget::tab-bar
+{
+    left: 20px;
+}
+
+QTabBar::tab
+{
+    margin-left: 5;
+    margin-right: 5;
+    min-width: 100px;
+    background-color: rgb(40, 40, 40);
+    font: 14pt 'Futura PT';
+    color: rgb(242, 242, 242);
+    border-left: 2px solid rgb(89, 89, 89);
+    border-right: 2px solid rgb(89, 89, 89);
+    border-top: 2px solid rgb(89, 89, 89);
+    padding: 2px;}
+
+QTabBar::tab:selected
+{
+    background-color: rgb(89, 89, 89);
+}
+
+
+
+/* -------------- TEXTEDIT -------------------*/
+QTextEdit {
+    background-color: rgba(0,0,0,255);
+    color: white;
+    font: 10pt &quot;Open Sans&quot;;
+border: black;
+}
+
+/* -------------- Scroll Bar --------------- */
+
+QTextEdit QScrollBar:vertical {
+        background: black;
+/* margin sets up how far the handle can travel */
+        margin: 0px 0px 0px 0px;
+}
+
+/* Sets up the color and height of handle */
+QTextEdit QScrollBar::handle:vertical {
+        background: #444444;
+}
+
+/* This remvoes the bottom button by setting the height to 0px */
+QTextEdit QScrollBar::add-line:vertical {
+        height: 0px;
+        subcontrol-position: bottom;
+        subcontrol-origin: margin;
+}
+
+/* This remvoes the top button by setting the height to 0px */
+QTextEdit QScrollBar::sub-line:vertical {
+        height: 0px;
+        subcontrol-position: top;
+        subcontrol-origin: margin;
+}
+
+/* need this to get rid of crosshatching on scrollbar background */
+QTextEdit QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+        background: #222222;
+}
+
+
+
 </string>
+  </property>
+  <widget class="QLabel" name="no_focus">
+   <property name="geometry">
+    <rect>
+     <x>490</x>
+     <y>190</y>
+     <width>58</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QFrame" name="widgetFrame">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>370</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
    </property>
    <property name="frameShape">
     <enum>QFrame::StyledPanel</enum>
@@ -240,9 +292,9 @@ QComboBox::focus
    <widget class="QPushButton" name="button_save">
     <property name="geometry">
      <rect>
-      <x>659</x>
+      <x>720</x>
       <y>332</y>
-      <width>71</width>
+      <width>70</width>
       <height>24</height>
      </rect>
     </property>
@@ -253,14 +305,14 @@ QComboBox::focus
    <widget class="QPushButton" name="button_cancel">
     <property name="geometry">
      <rect>
-      <x>581</x>
+      <x>640</x>
       <y>332</y>
-      <width>71</width>
+      <width>70</width>
       <height>24</height>
      </rect>
     </property>
     <property name="text">
-     <string>Cancel</string>
+     <string>Close</string>
     </property>
    </widget>
    <widget class="QPushButton" name="button_restore">
@@ -268,7 +320,7 @@ QComboBox::focus
      <rect>
       <x>11</x>
       <y>332</y>
-      <width>131</width>
+      <width>151</width>
       <height>24</height>
      </rect>
     </property>
@@ -281,12 +333,12 @@ QComboBox::focus
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>740</width>
+      <width>800</width>
       <height>320</height>
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="mode_octaves">
      <widget class="QFrame" name="CVOut1">
@@ -334,7 +386,8 @@ QComboBox::focus
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -376,7 +429,8 @@ QComboBox::focus
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -418,7 +472,8 @@ QComboBox::focus
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -460,7 +515,8 @@ QComboBox::focus
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -502,7 +558,8 @@ QComboBox::focus
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -544,7 +601,8 @@ QComboBox::focus
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -722,33 +780,22 @@ QLabel
        <rect>
         <x>581</x>
         <y>16</y>
-        <width>151</width>
+        <width>210</width>
         <height>291</height>
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">QTextEdit {
-    background-color: rgba(0,0,0,255);
-    color: white;
-    font: 14px &quot;Futura-normal&quot;;
-border: black;
-}
-</string>
+       <string notr="true"/>
       </property>
       <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
+       <enum>Qt::ScrollBarAsNeeded</enum>
       </property>
       <property name="html">
        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Futura-normal'; font-size:14px; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;Each 12bit value (0-4095) is a scaling calibration value for the listed voltage. &lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;To calibrate a voltage value, measure the CV out with a precision voltmeter, or connect it to a trusted oscillator and measure the pitches with a tuner. When you adjust a value, the CV is immediately updated so that it can be measured in real time. &lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;You can directly control the CVs with 12 bit values by using NRPN 1 for CV1, and NRPN2 for CV2. &lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Droid Sans Mono'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Open Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;Each 12bit value (0-4095) is a scaling calibration value for the listed voltage. &lt;br /&gt;&lt;br /&gt;To calibrate a voltage value, measure the CV out with a precision voltmeter, or connect it to a trusted oscillator and measure the pitches with a tuner. When you adjust a value, the CV is immediately updated so that it can be measured in real time. &lt;br /&gt;&lt;br /&gt;You can directly control the CVs with 12 bit values by using NRPN 1 for CV1, and NRPN 2 for CV2. &lt;br /&gt;&lt;br /&gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
      <widget class="QFrame" name="CVOut2">
@@ -796,7 +843,8 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -838,7 +886,8 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -880,7 +929,8 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -922,7 +972,8 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -964,7 +1015,8 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -1006,7 +1058,8 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="font">
         <font>
-         <pointsize>16</pointsize>
+         <family>Corbel</family>
+         <pointsize>12</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
@@ -1182,25 +1235,14 @@ QLabel
     </widget>
     <widget class="QWidget" name="mode_notes">
      <property name="styleSheet">
-      <string notr="true">/* ---------- QSpinBox ------------*/
-kmiSpinBoxUpDown
-{
-        font: 12pt &quot;Corbel&quot;;
-        background-color: rgba(1, 1, 1, 100);
-        color: red;
-       padding-left: 4px;
-		border: 1px solid rgb(100,0,0);
-
-}
-
-</string>
+      <string notr="true"/>
      </property>
      <widget class="QTabWidget" name="tabWidget">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>740</width>
+        <width>800</width>
         <height>320</height>
        </rect>
       </property>
@@ -1217,7 +1259,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_V">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>43</y>
           <width>25</width>
           <height>30</height>
@@ -1233,7 +1275,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1255,7 +1297,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_0">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1263,7 +1305,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1281,7 +1324,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_1">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1289,7 +1332,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1307,7 +1351,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_2">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1329,7 +1373,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_3">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1351,7 +1395,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_2">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1359,7 +1403,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1377,7 +1422,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_4">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1399,7 +1444,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_3">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1407,7 +1452,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1425,7 +1471,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_5">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1447,7 +1493,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_4">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1455,7 +1501,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1473,7 +1520,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_6">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1495,7 +1542,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_5">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1503,7 +1550,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1521,7 +1569,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_7">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1543,7 +1591,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_6">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1551,7 +1599,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1569,7 +1618,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_8">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1591,7 +1640,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_7">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1599,7 +1648,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1617,7 +1667,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_9">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1639,7 +1689,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_8">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1647,7 +1697,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1665,7 +1716,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_10">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1687,7 +1738,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_9">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1695,7 +1746,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1713,7 +1765,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_11">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1735,7 +1787,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_10">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1743,7 +1795,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1761,7 +1814,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_C_12">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -1783,7 +1836,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_11">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -1791,7 +1844,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1809,7 +1863,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_12">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -1817,7 +1871,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1835,7 +1890,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_13">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -1843,7 +1898,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1861,7 +1917,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_14">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -1869,7 +1925,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1887,7 +1944,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_15">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -1895,7 +1952,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1913,7 +1971,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_16">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -1921,7 +1979,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1939,7 +1998,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_17">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -1947,7 +2006,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1965,7 +2025,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_18">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -1973,7 +2033,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -1991,7 +2052,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_19">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -1999,7 +2060,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2017,7 +2079,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_20">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -2025,7 +2087,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2043,7 +2106,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_21">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -2051,7 +2114,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2069,7 +2133,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_22">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -2077,7 +2141,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2095,7 +2160,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_23">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -2103,7 +2168,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2121,7 +2187,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_24">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2129,7 +2195,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2147,7 +2214,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_25">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2155,7 +2222,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2173,7 +2241,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_26">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2181,7 +2249,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2199,7 +2268,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_27">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2207,7 +2276,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2225,7 +2295,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_28">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2233,7 +2303,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2251,7 +2322,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_29">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2259,7 +2330,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2277,7 +2349,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_30">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2285,7 +2357,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2303,7 +2376,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_31">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2311,7 +2384,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2329,7 +2403,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_32">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2337,7 +2411,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2355,7 +2430,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_33">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2363,7 +2438,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2381,7 +2457,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_34">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2389,7 +2465,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2407,7 +2484,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_35">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -2415,7 +2492,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2433,7 +2511,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_36">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2441,7 +2519,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2459,7 +2538,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_37">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2467,7 +2546,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2485,7 +2565,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_38">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2493,7 +2573,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2511,7 +2592,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_39">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2519,7 +2600,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2537,7 +2619,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_40">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2545,7 +2627,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2563,7 +2646,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_41">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2571,7 +2654,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2589,7 +2673,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_42">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2597,7 +2681,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2615,7 +2700,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_43">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2623,7 +2708,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2641,7 +2727,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_44">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2649,7 +2735,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2667,7 +2754,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_45">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2675,7 +2762,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2693,7 +2781,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_46">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2701,7 +2789,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2719,7 +2808,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_47">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -2727,7 +2816,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2745,7 +2835,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_V_2">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>83</y>
           <width>25</width>
           <height>30</height>
@@ -2761,7 +2851,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_V_3">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>123</y>
           <width>25</width>
           <height>30</height>
@@ -2777,7 +2867,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_V_4">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>163</y>
           <width>25</width>
           <height>30</height>
@@ -2793,7 +2883,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_V_5">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>203</y>
           <width>25</width>
           <height>30</height>
@@ -2809,7 +2899,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_V_6">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>243</y>
           <width>25</width>
           <height>30</height>
@@ -2825,7 +2915,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_48">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -2833,7 +2923,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2851,7 +2942,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_49">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -2859,7 +2950,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2877,7 +2969,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_50">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -2885,7 +2977,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2903,7 +2996,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_51">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -2911,7 +3004,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2929,7 +3023,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_52">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -2937,7 +3031,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2955,7 +3050,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_53">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -2963,7 +3058,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -2981,7 +3077,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_54">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -2989,7 +3085,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3007,7 +3104,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_55">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -3015,7 +3112,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3033,7 +3131,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_56">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -3041,7 +3139,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3059,7 +3158,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_57">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -3067,7 +3166,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3085,7 +3185,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_58">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -3093,7 +3193,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3111,7 +3212,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_59">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -3119,7 +3220,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3137,7 +3239,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv1_N_60">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>243</y>
           <width>55</width>
           <height>30</height>
@@ -3145,7 +3247,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3162,13 +3265,16 @@ kmiSpinBoxUpDown
        </widget>
       </widget>
       <widget class="QWidget" name="tab_2">
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
        <attribute name="title">
         <string>CV 2</string>
        </attribute>
        <widget class="QLabel" name="label_t2_V">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>43</y>
           <width>25</width>
           <height>30</height>
@@ -3184,7 +3290,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3206,7 +3312,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_0">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3214,7 +3320,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3232,7 +3339,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_1">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3240,7 +3347,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3258,7 +3366,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_2">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3280,7 +3388,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_3">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3302,7 +3410,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_2">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3310,7 +3418,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3328,7 +3437,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_4">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3350,7 +3459,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_3">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3358,7 +3467,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3376,7 +3486,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_5">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3398,7 +3508,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_4">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3406,7 +3516,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3424,7 +3535,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_6">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3446,7 +3557,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_5">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3454,7 +3565,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3472,7 +3584,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_7">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3494,7 +3606,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_6">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3502,7 +3614,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3520,7 +3633,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_8">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3542,7 +3655,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_7">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3550,7 +3663,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3568,7 +3682,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_9">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3590,7 +3704,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_8">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3598,7 +3712,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3616,7 +3731,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_10">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3638,7 +3753,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_9">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3646,7 +3761,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3664,7 +3780,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_11">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3686,7 +3802,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_10">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3694,7 +3810,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3712,7 +3829,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_C_12">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>21</y>
           <width>55</width>
           <height>16</height>
@@ -3734,7 +3851,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_11">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>43</y>
           <width>55</width>
           <height>30</height>
@@ -3742,7 +3859,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3760,7 +3878,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_12">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -3768,7 +3886,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3786,7 +3905,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_13">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -3794,7 +3913,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3812,7 +3932,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_14">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -3820,7 +3940,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3838,7 +3959,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_15">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -3846,7 +3967,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3864,7 +3986,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_16">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -3872,7 +3994,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3890,7 +4013,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_17">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -3898,7 +4021,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3916,7 +4040,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_18">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -3924,7 +4048,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3942,7 +4067,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_19">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -3950,7 +4075,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3968,7 +4094,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_20">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -3976,7 +4102,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -3994,7 +4121,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_21">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -4002,7 +4129,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4020,7 +4148,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_22">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -4028,7 +4156,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4046,7 +4175,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_23">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>83</y>
           <width>55</width>
           <height>30</height>
@@ -4054,7 +4183,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4072,7 +4202,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_24">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4080,7 +4210,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4098,7 +4229,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_25">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4106,7 +4237,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4124,7 +4256,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_26">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4132,7 +4264,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4150,7 +4283,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_27">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4158,7 +4291,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4176,7 +4310,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_28">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4184,7 +4318,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4202,7 +4337,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_29">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4210,7 +4345,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4228,7 +4364,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_30">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4236,7 +4372,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4254,7 +4391,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_31">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4262,7 +4399,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4280,7 +4418,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_32">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4288,7 +4426,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4306,7 +4445,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_33">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4314,7 +4453,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4332,7 +4472,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_34">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4340,7 +4480,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4358,7 +4499,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_35">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>123</y>
           <width>55</width>
           <height>30</height>
@@ -4366,7 +4507,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4384,7 +4526,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_36">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4392,7 +4534,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4410,7 +4553,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_37">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4418,7 +4561,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4436,7 +4580,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_38">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4444,7 +4588,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4462,7 +4607,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_39">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4470,7 +4615,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4488,7 +4634,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_40">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4496,7 +4642,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4514,7 +4661,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_41">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4522,7 +4669,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4540,7 +4688,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_42">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4548,7 +4696,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4566,7 +4715,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_43">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4574,7 +4723,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4592,7 +4742,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_44">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4600,7 +4750,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4618,7 +4769,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_45">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4626,7 +4777,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4644,7 +4796,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_46">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4652,7 +4804,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4670,7 +4823,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_47">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>163</y>
           <width>55</width>
           <height>30</height>
@@ -4678,7 +4831,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4696,7 +4850,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_V_2">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>83</y>
           <width>25</width>
           <height>30</height>
@@ -4712,7 +4866,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_V_3">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>123</y>
           <width>25</width>
           <height>30</height>
@@ -4728,7 +4882,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_V_4">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>163</y>
           <width>25</width>
           <height>30</height>
@@ -4744,7 +4898,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_V_5">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>203</y>
           <width>25</width>
           <height>30</height>
@@ -4760,7 +4914,7 @@ kmiSpinBoxUpDown
        <widget class="QLabel" name="label_t2_V_6">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>37</x>
           <y>243</y>
           <width>25</width>
           <height>30</height>
@@ -4776,7 +4930,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_48">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -4784,7 +4938,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4802,7 +4957,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_49">
         <property name="geometry">
          <rect>
-          <x>90</x>
+          <x>123</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -4810,7 +4965,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4828,7 +4984,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_50">
         <property name="geometry">
          <rect>
-          <x>148</x>
+          <x>181</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -4836,7 +4992,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4854,7 +5011,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_51">
         <property name="geometry">
          <rect>
-          <x>206</x>
+          <x>239</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -4862,7 +5019,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4880,7 +5038,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_52">
         <property name="geometry">
          <rect>
-          <x>264</x>
+          <x>297</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -4888,7 +5046,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4906,7 +5065,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_53">
         <property name="geometry">
          <rect>
-          <x>322</x>
+          <x>355</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -4914,7 +5073,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4932,7 +5092,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_54">
         <property name="geometry">
          <rect>
-          <x>380</x>
+          <x>413</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -4940,7 +5100,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4958,7 +5119,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_55">
         <property name="geometry">
          <rect>
-          <x>438</x>
+          <x>471</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -4966,7 +5127,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -4984,7 +5146,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_56">
         <property name="geometry">
          <rect>
-          <x>496</x>
+          <x>529</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -4992,7 +5154,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -5010,7 +5173,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_57">
         <property name="geometry">
          <rect>
-          <x>554</x>
+          <x>587</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -5018,7 +5181,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -5036,7 +5200,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_58">
         <property name="geometry">
          <rect>
-          <x>612</x>
+          <x>645</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -5044,7 +5208,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -5062,7 +5227,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_59">
         <property name="geometry">
          <rect>
-          <x>670</x>
+          <x>703</x>
           <y>203</y>
           <width>55</width>
           <height>30</height>
@@ -5070,7 +5235,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -5088,7 +5254,7 @@ kmiSpinBoxUpDown
        <widget class="kmiSpinBoxUpDown" name="cv2_N_60">
         <property name="geometry">
          <rect>
-          <x>32</x>
+          <x>65</x>
           <y>243</y>
           <width>55</width>
           <height>30</height>
@@ -5096,7 +5262,8 @@ kmiSpinBoxUpDown
         </property>
         <property name="font">
          <font>
-          <pointsize>16</pointsize>
+          <family>Corbel</family>
+          <pointsize>12</pointsize>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -5118,14 +5285,14 @@ kmiSpinBoxUpDown
    <widget class="QComboBox" name="cv_cal_mode">
     <property name="geometry">
      <rect>
-      <x>316</x>
+      <x>350</x>
       <y>332</y>
-      <width>61</width>
+      <width>70</width>
       <height>24</height>
      </rect>
     </property>
     <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sets the method for calibrating the CV Outs.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Octaves (default): set a calibration value for &lt;/p&gt;&lt;p&gt;each octave, scale each note in between.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Notes: set a calibration value for each note. &lt;/p&gt;&lt;p&gt;Good for tuning precise voltages, taming a &lt;/p&gt;&lt;p&gt;tempermental oscillator, or creating custom&lt;/p&gt;&lt;p&gt;scales in non-western tunings.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sets the method for calibrating the CV Outs.&lt;/p&gt;&lt;p&gt;Octaves (default): set a calibration value for &lt;br/&gt;each octave, scale each note in between.&lt;/p&gt;&lt;p&gt;Notes: set a calibration value for each note. &lt;br/&gt;Good for tuning precise voltages, taming a &lt;br/&gt;tempermental oscillator, or creating custom&lt;br/&gt;scales in non-western tunings.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <item>
      <property name="text">
@@ -5141,7 +5308,7 @@ kmiSpinBoxUpDown
    <widget class="QLabel" name="label_t2_27">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>216</x>
       <y>332</y>
       <width>131</width>
       <height>24</height>
@@ -5157,9 +5324,9 @@ kmiSpinBoxUpDown
    <widget class="QPushButton" name="button_calcNotes">
     <property name="geometry">
      <rect>
-      <x>380</x>
+      <x>430</x>
       <y>332</y>
-      <width>131</width>
+      <width>141</width>
       <height>24</height>
      </rect>
     </property>

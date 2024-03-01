@@ -5,6 +5,8 @@
 #define PEDALCAL_H
 
 #include <QDialog>
+#include <QVariant>
+#include <QSettings>
 
 namespace Ui {
 class pedalCal;
@@ -22,6 +24,8 @@ public:
 
     int inputVal, calMin, calMax, outputVal;
 
+    QSettings *sessionSettings;
+
 signals:
     void signalWindowClosed();
     void signalStoreValue(QString, QVariant);
@@ -38,7 +42,7 @@ public slots:
     void slotSetMin(int val);
     void slotSetMax(int val);
     void slotCalculateOutput();
-    void slotLoadJSONCalibrationValues(QVariantMap preset, QVariantMap);
+    void slotLoadJSONCalibrationValues(QVariantMap preset);
     void slotSaveAndSendCalibrationValues();
 
 protected:
