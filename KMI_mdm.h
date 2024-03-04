@@ -10,7 +10,7 @@
   Written by Eric Bateman, August 2021.
   (c) Copyright 2021 Keith McMillen Instruments, all rights reserved.
 
-  See KMI_dm.cpp for more details.
+  See KMI_mdm.cpp for more details.
 
 */
 
@@ -23,13 +23,14 @@
 
 #include "RtMidi.h"
 #include "kmi_ports.h"
+#include "midi.h"
 
-enum
+typedef enum
 {
-    NONE_PN,
-    RPN,
-    NRPN
-};
+    MODE_UNDEF,
+    MODE_RPN,
+    MODE_NRPN
+} PARAM_MODE;
 
 enum PARAM_DATA_TYPES
 {
@@ -152,14 +153,29 @@ public:
     // stops MIDI if sysex is sending
     bool ioGate;
 
+#define MAX_MIDI_PACKET_SIZE 64
+    std::vector<uchar> packet; // packet to stuff outgoing midi packets into (not sysex)
+    QTimer midiSendTimer;
+
     QDialog* errDialog;
 
-    //------ Rx MIDI Data Variables
+    //------ Rx MIDI Parameter Address Variables
     uchar RPN_MSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     uchar RPN_LSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     uchar NRPN_MSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     uchar NRPN_LSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    uchar RPNorNRPN = 0;
+
+    //------ Rx MIDI Parameter Data Variables
+    uchar RPN_DATA_MSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uchar RPN_DATA_LSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uchar NRPN_DATA_MSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uchar NRPN_DATA_LSB[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+    //----- TX MIDI Parameter Data Variables
+    uint16_t LAST_SENT_RPN[NUM_MIDI_CHANNELS];
+    uint16_t LAST_SENT_NRPN[NUM_MIDI_CHANNELS];
+
+    PARAM_MODE paramMode = MODE_UNDEF;
 
 // public functions
 
@@ -196,8 +212,8 @@ signals:
     void signalRxMidi_noteOn(uchar chan, uchar note, uchar velocity);
     void signalRxMidi_polyAT(uchar chan, uchar note, uchar val);
     void signalRxMidi_controlChange(uchar chan, uchar cc, uchar val);
-    void signalRxMidi_RPN(uchar chan, int rpn, int val, uchar messagetype);
-    void signalRxMidi_NRPN(uchar chan, int rpn, int val, uchar messagetype);
+    void signalRxMidi_RPN(uchar chan, int rpn, int val);
+    void signalRxMidi_NRPN(uchar chan, int nrpn, int val);
     void signalRxMidi_progChange(uchar chan, uchar val);
     void signalRxMidi_aftertouch(uchar chan, uchar val);
     void signalRxMidi_pitchBend(uchar chan, int val);
@@ -258,8 +274,12 @@ public slots:
     void slotSendMIDI(uchar status, uchar d1, uchar d2);
     void slotSendMIDI(uchar status, uchar d1, uchar d2, uchar chan);
 
+    void slotEmptyMIDIBuffer();
+
+    void slotInitNRPN();
+    void slotSendMIDI_NRPN(int parameter_number, int value, uchar channel);
+
     void slotParsePacket(QByteArray packetArray);
-    void slotRxParam(int rpn, uchar val, uchar chan, uchar rpn_datatype);
 
     void slotErrorPopup(QString errorMessage);
 

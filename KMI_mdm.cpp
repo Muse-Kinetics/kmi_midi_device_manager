@@ -48,7 +48,9 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     lookupPID.insert(PID_SOFTSTEP2, "SoftStep2");
     lookupPID.insert(PID_SOFTSTEP_BL, "SoftStep Bootloader");
     lookupPID.insert(PID_SOFTSTEP3, "SoftStep3");
-    lookupPID.insert(PID_12STEP, "12 Step");
+    lookupPID.insert(PID_12STEP1, "12 Step1");
+    lookupPID.insert(PID_12STEP2, "12 Step2");
+    lookupPID.insert(PID_12STEP_BL, "12 Step Bootloader");
     lookupPID.insert(PID_QUNEXUS, "QuNexus");
     lookupPID.insert(PID_KBOARD, "K-Board");
     lookupPID.insert(PID_APPL_CBL, "KMI Apple Cable");
@@ -149,6 +151,10 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 //    connect(this, SIGNAL(signalBeginBlTimer()), this, SLOT(slotBeginBlTimer()));
 //    connect(this, SIGNAL(signalBeginFwTimer()), this, SLOT(slotBeginFwTimer()));
 //    connect(this, SIGNAL(signalStopGlobalTimer()), this, SLOT(slotStopGlobalTimer()));
+
+    // Configure the timer
+    midiSendTimer.setInterval(1); // Set interval to 1 ms
+    connect(&midiSendTimer, &QTimer::timeout, this, &MidiDeviceManager::slotEmptyMIDIBuffer);
 
     if (PID != PID_AUX)
     {
@@ -335,6 +341,7 @@ bool MidiDeviceManager::slotOpenMidiOut()
         /* Return the error */
         DM_OUT << "OPEN MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
         port_out_open = false;
+        midiSendTimer.stop();
         portName_in = "";
         connected = false;
         bootloaderMode = false;
@@ -344,6 +351,8 @@ bool MidiDeviceManager::slotOpenMidiOut()
     }
     portName_out = kmiPorts->getOutPortName(port_out);
     port_out_open = true;
+    slotInitNRPN(); // zero out previous paramaters sent/received
+    midiSendTimer.start();
 
     if (PID == PID_AUX && !connected) // aux ports don't need firmware to match for connect
     {
@@ -370,7 +379,7 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
     DM_OUT << "slotCloseMidiIn called, send disconnect signal: " << signal;
 
     // alert host application that we are disconnected
-    bootloaderMode = false;
+    //bootloaderMode = false;
     port_in_open = false;
     portName_in = "";
 
@@ -400,11 +409,13 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
             midi_in->cancelCallback();
             callbackIsSet = false;
         }
-//        DM_OUT << "deleting midi_in";
-//        delete midi_in;
-//        midi_in = new RtMidiIn();
 
-        //midi_in = nullptr;
+        if (bootloaderMode)
+        {
+            DM_OUT << "left bootloader, deleting/renewing midi_in";
+            delete midi_in;
+            midi_in = new RtMidiIn();
+        }
     }
     catch (RtMidiError &error)
     {
@@ -425,8 +436,9 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 {
     DM_OUT << "slotCloseMidiOut called, send disconnect signal: " << signal;
 
-    bootloaderMode = false;
+
     port_out_open = false;
+    midiSendTimer.stop();
     portName_out = "";
 
     // alert host application that we are disconnected
@@ -446,10 +458,14 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
     {
         //close ports
         midi_out->closePort();
-//        DM_OUT << "deleting midi_out";
-//        delete midi_out;
-//        midi_out = new RtMidiOut();
-        //midi_out = nullptr;
+
+        if (bootloaderMode)
+        {
+            DM_OUT << "left bootloader, deleting/renewing midi_out";
+            delete midi_out;
+            midi_out = new RtMidiOut();
+            bootloaderMode = false;
+        }
     }
     catch (RtMidiError &error)
     {
@@ -523,6 +539,7 @@ bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
     {
         DM_OUT << "openVirtualOutPort error:" << (QString::fromStdString(error.getMessage()));
         port_out_open = false;
+        midiSendTimer.stop();
         portName_in = "";
         connected = false;
         bootloaderMode = false;
@@ -532,325 +549,12 @@ bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
     }
     portName_out = portName;
     port_out_open = true;
+    midiSendTimer.start();
     connected = true;
     emit signalConnected(true);
     return 1;
 }
 #endif
-
-// -----------------------------------------------------------
-// reset connections
-// -----------------------------------------------------------
-
-// reset connections is needed when the bootloader and app port names don't match
-//void MidiDeviceManager::slotResetConnections(QString portNameApp, QString portNameBootloader)
-//{
-//    DM_OUT << "slotResetConnections called - portName: " << portNameApp << " portNameBootloader: " << portNameBootloader << "bootloaderMode: " << bootloaderMode;
-//    bool refreshDone = false;
-//    bool initialBootloaderMode = bootloaderMode;
-//    int cycleCount = 0;
-
-//    QString thisPortName;
-
-//    QString lastPortName = kmiPorts->getInPortName(port_in);
-
-//    unsigned char numInPorts, numOutPorts;
-
-////    if (midi_in != nullptr)
-////    {
-////        midi_in->cancelCallback();
-////    }
-////    else
-////    {
-////        DM_OUT << "WARNING: midi_in does not exist, aborting cancel callback";
-////    }
-
-//    pollingStatus = false;
-
-////    DM_OUT << "Closing ports..." << lastPortName;
-
-////    slotCloseMidiIn();
-////    slotCloseMidiOut();
-
-//    //if (midi_in != nullptr)
-//        //midi_in->closePort();
-//    //if (midi_out != nullptr)
-//        //midi_out->closePort();
-
-//    //DM_OUT << "deleting ports...";
-//    //delete midi_out;
-//    //delete midi_in;
-
-//    // safety for other threads to chck
-//    //midi_in = nullptr;
-//    //midi_out = nullptr;
-
-//    refreshTimer.restart();
-
-//    failFlag = false;
-//    while (!refreshDone && !failFlag) // loop until the port changes
-//    {
-//        // this is a hack for now, KMI_Ports should be reporting these changes, investigate this further
-//        DM_OUT << "\n";
-//        DM_OUT << "#######################################################";
-//        DM_OUT << "slotResetConnections - getPortCount - start refreshTimer";
-//        DM_OUT << "#######################################################";
-
-////        if (midi_in == nullptr)
-////        {
-////            //DM_OUT << "new midi_in instance...";
-////            midi_in = new RtMidiIn(); // refresh instance
-////        }
-////        else
-////        {
-////            midi_in->cancelCallback();
-////        }
-////        if (midi_out == nullptr)
-////        {
-////            //DM_OUT << "new midi_out instance...";
-////            midi_out = new RtMidiOut(); // refresh instance
-////        }
-
-////        try
-////        {
-////            midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
-////        }
-////        catch (RtMidiError &error)
-////        {
-////            /* Return the error */
-////            DM_OUT << "Error cancelling/setting callback - Message: " << QString::fromStdString(error.getMessage());
-////        }
-
-////        midi_in->ignoreTypes( false, false, false );
-
-//        numInPorts = kmiPorts->IN_PORT_MGR->getPortCount();
-//        numOutPorts = kmiPorts->OUT_PORT_MGR->getPortCount();
-
-//        // we need both an in and an out port to continue
-//        if (numInPorts + numOutPorts > 1)
-//        {
-//            // test/fix input port name
-//            for (uint thisPort = 0; thisPort < (numInPorts); thisPort++)
-//            {
-//                if (thisPort <= numInPorts)
-//                {
-
-//                    QString newPortName = kmiPorts->getInPortName(thisPort);
-
-//                    // confirm we are either going bootLoader->app or app->bootLoader
-//                    if (initialBootloaderMode && newPortName == portNameApp)
-//                    {
-//                        DM_OUT << "Bootloader->App - found application input port: " << newPortName << " at port #: " << thisPort;
-//                        slotUpdatePortIn(thisPort);
-//                    }
-//                    else if (!initialBootloaderMode && newPortName == portNameBootloader)
-//                    {
-//                        DM_OUT << "App->Bootloader - found bootloader input port: " << newPortName << " at port #: " << thisPort;
-//                        slotUpdatePortIn(thisPort);
-//                    }
-//                    else
-//                    {
-//                        DM_OUT << "Found input port - thisPort: " << thisPort << " newPortName: " << newPortName;
-//                    }
-
-//                }
-//                else
-//                {
-//                    DM_OUT << "Port subtraction before end of for loop, numInPorts: " << numInPorts << " thisPort: " << thisPort;
-//                }
-//            }
-
-//            // test/fix output port name
-//            for (uint thisPort = 0; thisPort < (numOutPorts); thisPort++)
-//            {
-//                if (thisPort <= numOutPorts)
-//                {
-//                    QString newPortName = kmiPorts->getOutPortName(thisPort);
-
-//                    // confirm we are either going bootLoader->app or app->bootLoader
-//                    if (initialBootloaderMode && newPortName == portNameApp)
-//                    {
-//                        DM_OUT << "Bootloader->App - found application output port: " << newPortName << " at port #: " << thisPort;
-//                        slotUpdatePortOut(thisPort);
-//                    }
-//                    else if (!initialBootloaderMode && newPortName == portNameBootloader)
-//                    {
-//                        DM_OUT << "App->Bootloader - found bootloader output port: " << newPortName << " at port #: " << thisPort;
-//                        slotUpdatePortOut(thisPort);
-//                    }
-//                    else
-//                    {
-//                        DM_OUT << "Found output port - thisPort: " << thisPort << " newPortName: " << newPortName;
-//                    }
-//                }
-//                else
-//                {
-//                    DM_OUT << "Port subtraction before end of for loop, numOutPorts: " << numOutPorts << " thisPort: " << thisPort;
-//                }
-//            }
-
-//            // attempting to open the ports when we are in between app and bootloader modes helps to flush out the old port settings
-////            try
-////            {
-////                thisPortName = kmiPorts->getInPortName(port_in);
-
-////                DM_OUT << "Opening ports..." << thisPortName << " port_in: " << port_in << " port_out" << port_out;
-
-//////                if (midi_in == nullptr)
-//////                {
-//////                    //DM_OUT << "new midi_in instance...";
-//////                    midi_in = new RtMidiIn(); // refresh instance
-//////                }
-//////                if (midi_out == nullptr)
-//////                {
-//////                    //DM_OUT << "new midi_in instance...";
-//////                    midi_out = new RtMidiOut(); // refresh instance
-//////                }
-////                midi_in->openPort(port_in);
-////                midi_out->openPort(port_out);
-////            }
-////            catch (RtMidiError &error)
-////            {
-////                /* Return the error */
-////                thisPortName = ""; // prevents refreshDone being set to true in next if statement
-////                DM_OUT << "Port #" << port_in << " not found, retrying. Error Message: " << QString::fromStdString(error.getMessage());
-
-////            }
-
-//            // *****************************************
-//            // validate if the ports have been refreshed
-//            // *****************************************
-//            if (!initialBootloaderMode && portName_in == portNameBootloader && portName_out == portNameBootloader) // test for app->bootloader
-//            {
-//                DM_OUT << "APP -> BOOTLOADER CYCLE COMPLETE - input port: " << portName_in;
-
-//                if (portName_in == SS_BL_PORT) slotUpdatePID(PID_SOFTSTEP_BL); // hack for softstep
-//                bootloaderMode = true;
-//                refreshDone = true;
-//                pollingStatus = true; // app->bootloader, begin polling
-//            }
-//            else if (initialBootloaderMode && portName_in == portNameApp && portName_out == portNameApp) // test if bootloader->app
-//            {
-//                DM_OUT << "BOOTLOADER -> APP CYCLE COMPLETE - input port: " << portName_in;
-
-//                if (portName_in == SS_IN_P1) slotUpdatePID(PID_SOFTSTEP2); // hack for softstep
-//                bootloaderMode = true;
-//                refreshDone = true;
-//                pollingStatus = true; // bootloader->app, begin polling
-//            }
-//            else // we are about to loop back for up to 45 seconds - close the ports, which is necessary to flush out the old settings
-//            {
-
-//                DM_OUT << "No port match - initialBootloaderMode: " << initialBootloaderMode << " portName_in: " << portName_in << " portName_out: " << portName_out;
-
-
-//            } // end validate if ports have been refreshed
-//        } // end if (numInPorts + numOutPorts > 1)
-//        refreshTimer.restart();
-//        int lastTick = 0;
-
-//        while(refreshTimer.elapsed() < 1000)
-//        {
-//            if (refreshTimer.elapsed() > (lastTick + 100))
-//            {
-//                lastTick = refreshTimer.elapsed();
-//                //DM_OUT << "Elapsed: " << lastTick;
-//            }
-//        }
-//        if (cycleCount > 44)
-//        {
-//            failFlag = true; // break the llop
-//        }
-//        else
-//        {
-////                    DM_OUT << "Closing ports..." << thisPortName;
-////                    if (midi_in != nullptr) midi_in->closePort();
-////                    if (midi_out != nullptr) midi_out->closePort();
-
-//            //DM_OUT << "deleting ports... ";
-//            DM_OUT << "";
-//            DM_OUT << "------------------------------------------------------";
-//            DM_OUT << "cycleCount: " << ++cycleCount << " time elapsed: " << refreshTimer.elapsed();
-//            DM_OUT << "------------------------------------------------------\n";
-//            //delete midi_out;
-//            //delete midi_in;
-
-//            //midi_in = nullptr; // re-instantiate these on the loop back in
-//            //midi_out = nullptr;
-//        }
-//    } // end while (!refreshDone && !failFlag)
-
-//    // safety check
-////    if (midi_in == nullptr)
-////    {
-////        //DM_OUT << "new midi_in instance...";
-////        midi_in = new RtMidiIn(); // refresh instance
-////    }
-////    else
-////    {
-////        midi_in->cancelCallback();
-////    }
-////    if (midi_out == nullptr)
-////    {
-////        //DM_OUT << "new midi_out instance...";
-////        midi_out = new RtMidiOut(); // refresh instance
-////    }
-
-//// brute force, but necessary to reset the ports
-//#ifdef Q_OS_WIN
-//    // restart:
-
-//    if (!failFlag)
-//    {
-//        restart = true;
-
-//        QMessageBox msgBox;
-//        if (initialBootloaderMode) // if we are going bootloader->app
-//        {
-//            emit signalFwProgress(100);
-
-//            msgBox.setText(QString("Firmware update sent.\n\nThe application must now re-start to refresh the MIDI driver and connect to the %1.").arg(deviceName));
-//        }
-//        else // app->bootloader
-//        {
-//            msgBox.setText("Bootloader command sent.\n\nThe application must now re-start to refresh the MIDI driver.");
-//        }
-//        msgBox.setStandardButtons(QMessageBox::Ok);
-//        msgBox.setDefaultButton(QMessageBox::Ok);
-//        msgBox.exec();
-
-//        qApp->quit();
-//        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
-//    }
-//#endif
-
-//    if (failFlag == true)
-//    {
-//        slotFirmwareUpdateReset();
-//        connected = false;
-//        emit signalFirmwareUpdateComplete(false);
-//        pollingStatus = false;
-//        failFlag = false;
-//    }
-////    else if (initialBootloaderMode)
-////    {
-////        //slotStartPolling("slotResetConnections - bootloader->app successful");
-////        pollingStatus = true; // bootloader->app, begin polling
-////    }
-
-//    DM_OUT << "slotResetConnections set callback";
-
-//    try
-//    {
-//        midi_in->setCallback( &MidiDeviceManager::midiInCallback, this);
-//    }
-//    catch (RtMidiError &error)
-//    {
-//        /* Return the error */
-//        DM_OUT << "Error setting callback - Message: " << QString::fromStdString(error.getMessage());
-//    }
-//    midi_in->ignoreTypes( false, false, false );
-//}
 
 // sends a sysex universal ack with magic number, if received then alert app
 void MidiDeviceManager::slotTestFeedbackLoop()
@@ -880,20 +584,6 @@ void MidiDeviceManager::slotStartPolling(QString caller)
     //versionPoller = new QTimer(this);
     connect(versionPoller, SIGNAL(timeout()), this, SLOT(slotPollVersion()));
 
-//    // some devices take longer to boot up
-//    if (deviceName == "12 Step")
-//    {
-//        pollTime = 4000;
-//    }
-//    else if (deviceName == "SSCOM" || deviceName == "SoftStep" || deviceName == "SoftStep Bootloader")
-//    {
-//        pollTime = 4000;
-//    }
-//    else
-//    {
-//        pollTime = 2000;
-//    }
-//    //versionPoller->start(pollTime);
     versionPoller->setInterval(pollTime);
 
     //pollingStatus = true; // allow polling to proceed
@@ -992,11 +682,14 @@ void MidiDeviceManager::slotPollVersion()
 
         switch (PID)
         {
+        case PID_12STEP1:
+        case PID_12STEP2:
         case PID_SOFTSTEP1:
         case PID_SOFTSTEP2:
         case PID_SOFTSTEP3:
             if ((uchar)deviceFirmwareVersion[0] < 1) // pre-bootloader firmware
             {
+                // Softstep specific:
                 // version 98 is a placeholder for ZenDesk users and has a bootloader
                 // version 99 is the trojan horse bootloader update
                 // everything else needs to have the bootloader installed
@@ -1005,17 +698,28 @@ void MidiDeviceManager::slotPollVersion()
                 {
                     emit signalFwConsoleMessage("\n\n*** Installing bootloader *** - device will reboot several times!\n");
 
-                    DM_OUT << "fwVerPollSkipConnectCycles = 2";
-                    fwVerPollSkipConnectCycles = 2; // don't send fw version request during bootloader install
+                    //DM_OUT << "fwVerPollSkipConnectCycles = 2";
+                    fwVerPollSkipConnectCycles = 1; // don't send fw version request during bootloader install
 
-                    // this will install the firmware and reboot the device into bootloader mode
+                    // this will:
+                    // - install the trojan horse firmware image
+                    // - reboot the device
+                    // - trojan horse installs the bootloader
+                    // - device reboots into bootloader mode
                     slotSendSysExBA(bootloaderByteArray);
                 }
             }
-            else // this should be the standard method moving forward
+            else // this is the standard method to enter bootloader mode, once a bootloader is installed
             {
                 emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
-                slotSendSysEx(_bl_softstep, sizeof(_bl_softstep));
+                if (PID == PID_SOFTSTEP1 || PID == PID_SOFTSTEP2)
+                {
+                    slotSendSysEx(_bl_softstep, sizeof(_bl_softstep));
+                }
+                else if (PID == PID_12STEP1 || PID == PID_12STEP2)
+                {
+                    slotSendSysEx(_bl_12step, sizeof(_bl_12step));
+                }
             }
 
             break;
@@ -1033,7 +737,6 @@ void MidiDeviceManager::slotPollVersion()
 //        {
 //            emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
 //        }
-
         emit signalFwProgress(30); // increment progress bar
 
         firmwareUpdateState = FWUD_STATE_BL_SENT_WAIT;
@@ -1042,15 +745,15 @@ void MidiDeviceManager::slotPollVersion()
     case FWUD_STATE_BL_SENT_WAIT:
         DM_OUT << "Bootloader image/command sent, waiting..." << firmwareUpdateStateTimer.elapsed();
 
-        if (remainingSeconds == 20 ||remainingSeconds == 10)
-        {
-            kmiPorts->slotRefreshPortMaps(); // kick it
-        }
-        if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
-        {
-            DM_OUT << "Sending SysEx ID version request (again)";
-            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
-        }
+//        if (remainingSeconds == 20 ||remainingSeconds == 10)
+//        {
+//            kmiPorts->slotRefreshPortMaps(); // kick it
+//        }
+//        if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
+//        {
+//            DM_OUT << "Sending SysEx ID version request (again)";
+//            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+//        }
 
         if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
         {
@@ -1104,12 +807,14 @@ void MidiDeviceManager::slotPollVersion()
 
         if (remainingSeconds == 20 ||remainingSeconds == 10)
         {
-            kmiPorts->slotRefreshPortMaps(); // kick it
+            // EB TODO - are these lines necessary? Didn't need for 12 Step, does it break other devices? Windows?
+            //kmiPorts->slotRefreshPortMaps(); // kick it
         }
         if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
         {
-            DM_OUT << "Sending SysEx ID version request (again)";
-            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+            // EB TODO - are these lines necessary? Didn't need for 12 Step, does it break other devices? Windows?
+            //DM_OUT << "Sending SysEx ID version request (again)";
+            //slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
         }
 
         if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
@@ -1176,6 +881,7 @@ void MidiDeviceManager::slotPollVersion()
             if (fwVerPollSkipConnectCycles > 0) // don't send request while bootloader installs
             {
                 DM_OUT << "Blocking firmware version request - fwVerPollSkipConnectCycles: " << fwVerPollSkipConnectCycles;
+                fwVerPollSkipConnectCycles--;
             }
             else if (deviceName == "SSCOM") // old softStep firmware doesn't use the universal syx dev id request
             {
@@ -1183,9 +889,10 @@ void MidiDeviceManager::slotPollVersion()
                 slotSendSysEx(_fw_req_softstep, sizeof(_fw_req_softstep));
                 requestSent = true;
             }
-            else if (deviceName == "12 Step") // 12 step also doesn't use the universal syx dev id request
+            else if (portName_out == TWELVESTEP1_IN_P1) // 12 step legacy also doesn't use the universal syx dev id request
+                                                        // but new firmware will respond to the old message with the standard sysex universal ID reply
             {
-                DM_OUT << "Sending 12 Step firmware version request";
+                DM_OUT << "Sending 12 Step legacy firmware version request";
                 slotSendSysEx(_fw_req_12step, sizeof(_fw_req_12step));
                 requestSent = true;
             }
@@ -1269,6 +976,18 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 
     try
     {
+        // test if sysex start/stop are missing, and if so then add them
+        if (message[0] != MIDI_SX_START)
+        {
+            message.insert(message.begin(), MIDI_SX_START);
+            len++;
+        }
+        if (message[len - 1] != MIDI_SX_STOP) // len is not zero indexed
+        {
+            message.push_back(MIDI_SX_STOP);
+            len++;
+        }
+
         midi_out->sendMessage( &message );
     }
     catch (RtMidiError &error)
@@ -1432,7 +1151,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
             slotUpdatePID(PID_MIDI);
         }
 
-        DM_OUT << "ID Reply - PID_MIDI: " << PID_MIDI << " BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion; // << " fullMsg: " << sysExMessageByteArray;
+        DM_OUT << "ID Reply - PID_MIDI: " << PID_MIDI << " BL: " << devicebootloaderVersion << " FW: " << deviceFirmwareVersion << " bootloaderMode: " << bootloaderMode;
     }
     // ********************************************
     // process non fw/id SysEx Messages
@@ -1525,6 +1244,8 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
 }
 
+
+
 bool MidiDeviceManager::slotOpenFirmwareFile(QString filePath)
 {
     DM_OUT << "slotOpenFirmwareFile called, file: " << filePath;
@@ -1603,9 +1324,6 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4 newStatus: %5").arg(status).arg(d1).arg(d2).arg(chan).arg(newStatus);
 #endif
 
-    std::vector<uchar> packet;
-    packet.clear();
-
     if (ioGate == false)
     {
         DM_OUT << "ioGate stopped an incomming MIDI message - status:" << status;
@@ -1626,16 +1344,13 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     case MIDI_PITCH_BEND:
         if ((chan != 255 && chan > 127) || d1 > 127 || d2 > 127) return; // catch bad data
         //DM_OUT << QString("packet: status: %1 d1: %2 d2: %3").arg(newStatus).arg(d1).arg(d2);
-        packet.push_back(newStatus);
-        packet.push_back(d1);
-        packet.push_back(d2);
+        packet.insert(packet.end(), {newStatus, d1, d2});
         break;
     // two byte packets
     case MIDI_PROG_CHANGE:
     case MIDI_CHANNEL_PRESSURE:
         if ((chan != 255 && chan > 127) || d1 > 127) return; // catch bad data
-        packet.push_back(newStatus);
-        packet.push_back(d1);
+        packet.insert(packet.end(), {newStatus, d1});
         break;
     default:
 
@@ -1651,15 +1366,12 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
         case MIDI_MTC:
         case MIDI_SONG_POSITION:
             if (d1 > 127 || d2 > 127) return; // catch bad data
-            packet.push_back(newStatus);
-            packet.push_back(d1);
-            packet.push_back(d2);
+            packet.insert(packet.end(), {newStatus, d1, d2});
             break;
         // two byte packets
         case MIDI_SONG_SELECT:
             if (d1 > 127) return; // catch bad data
-            packet.push_back(newStatus);
-            packet.push_back(d1);
+            packet.insert(packet.end(), {newStatus, d1});
             break;
         // single byte packets
         case MIDI_TUNE_REQUEST:
@@ -1678,9 +1390,9 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
         } // end switch (sysCommon)
     } // end switch (status)
 
-#ifdef MDM_DEBUG_ENABLED
+//#ifdef MDM_DEBUG_ENABLED
     if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;
-#endif
+//#endif
 
     if (port_out_open == false)
     {
@@ -1688,20 +1400,114 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
         return; // handler doesn't exist
     }
 
-    // prepare and send the packet
-    try
+    if (packet.size() > MAX_MIDI_PACKET_SIZE)
     {
-        //DM_OUT << "RAW packet: " << packet;
-        midi_out->sendMessage( &packet );
-    }
-    catch (RtMidiError &error)
-    {
-        QString errorString = QString("MIDI SEND ERR: %1 \nStatus: %2").arg(QString::fromStdString(error.getMessage()), QString::number(status));
-        DM_OUT << errorString;
-        emit signalFwConsoleMessage(errorString);
+        slotEmptyMIDIBuffer();
     }
 }
 
+void MidiDeviceManager::slotEmptyMIDIBuffer()
+{
+    std::vector<uchar> message;
+
+    if (packet.size() == 0)
+    {
+        return;
+    }
+
+    for (size_t i = 0; i < packet.size(); ++i)
+    {
+        // Check if the current byte is a status byte
+        if (packet[i] >= 0x80)
+        {
+            // If there's already a message being constructed, send it
+            if (!message.empty())
+            {
+                try
+                {
+                    //DM_OUT << "RAW packet: " << packet;
+                    midi_out->sendMessage( &message );
+                }
+                catch (RtMidiError &error)
+                {
+                    QString errorString = QString("MIDI SEND PACKET ERR: %1 \n Size: %2").arg(QString::fromStdString(error.getMessage()), QString::number(packet.size()));
+                    DM_OUT << errorString;
+                    emit signalFwConsoleMessage(errorString);
+                }
+                message.clear(); // Clear the message vector for the next message
+            }
+        }
+
+        // Add the current byte to the message
+        message.push_back(packet[i]);
+
+        // If it's the last byte but not a status byte, ensure the message is sent
+        if (i == packet.size() - 1 && !message.empty())
+        {
+            try
+            {
+                //DM_OUT << "RAW packet: " << packet;
+                midi_out->sendMessage( &message );
+            }
+            catch (RtMidiError &error)
+            {
+                QString errorString = QString("MIDI SEND PACKET ERR: %1 \n Size: %2").arg(QString::fromStdString(error.getMessage()), QString::number(packet.size()));
+                DM_OUT << errorString;
+                emit signalFwConsoleMessage(errorString);
+            }
+        }
+    }
+
+    // Clear the packet after processing all messages
+    packet.clear();
+}
+
+void MidiDeviceManager::slotInitNRPN()
+{
+    for (int i = 0; i < NUM_MIDI_CHANNELS; i++)
+    {
+        // rx
+        RPN_MSB[i] = 255;
+        RPN_LSB[i] = 255;
+        NRPN_MSB[i] = 255;
+        NRPN_LSB[i] = 255;
+        RPN_DATA_MSB[i] = 0;
+        RPN_DATA_LSB[i] = 0;
+        NRPN_DATA_MSB[i] = 0;
+
+        LAST_SENT_NRPN[i] = 16384; // hopefully we never use this parameter #
+    }
+}
+
+void MidiDeviceManager::slotSendMIDI_NRPN(int parameter_number, int value, uchar channel)
+{
+    qDebug() << "slotSendMIDI_NRPN called parameter_number: " << parameter_number << " value: " << value << " channel: " << channel;
+    uint8_t param_msb, param_lsb, val_msb, val_lsb;
+
+    if (channel & 0xF0) // check for bad values
+    {
+        return;
+    }
+
+    val_msb   = (value  >> 7) & 0x7F;
+    val_lsb   =  value        & 0x7F;
+
+    //***  SEND PARAMETER NUMBER ON CHANGE  ***
+    if(parameter_number != LAST_SENT_NRPN[channel])
+    {
+        LAST_SENT_NRPN[channel] = parameter_number;
+
+        param_msb = (parameter_number >> 7) & 0x7F;
+        param_lsb =  parameter_number       & 0x7F;
+
+        slotSendMIDI(MIDI_CONTROL_CHANGE, MIDI_CC_NRPN_MSB, param_msb, channel);
+        slotSendMIDI(MIDI_CONTROL_CHANGE, MIDI_CC_NRPN_LSB, param_lsb, channel);
+    }
+
+    //***  SEND VALUE  ***
+    slotSendMIDI(MIDI_CONTROL_CHANGE, MIDI_CC_DATA_MSB, val_msb, channel);
+    slotSendMIDI(MIDI_CONTROL_CHANGE, MIDI_CC_DATA_LSB, val_lsb, channel);
+}
 
 void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
 {
@@ -1752,64 +1558,115 @@ void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
         cc = data1;
         val = data2;
 
-        // RPNs are a 14bit address (CC100 and CC101) with a 14bit data value (CC6 and CC38). In practice
-        // the midi org has only registered 6 addresses, and the MPE Configuration Message sets channels, so
-        // only the MSB (CC6) is used for data entry. The below routine preserves compatability and could be
-        // used as a basis for supporting NRPNs, which are manufacture defined. There is some confusion in the
-        // industry about DATA_INC and DATA_DEC as to wether they adjust DATA_MSB or DATA_LSB. For KBP4 we will
-        // ignore LSB, INC and DEC. -EB
-        uchar *param_MSB;
-        uchar *param_LSB;
-        int paramNum;
+        switch (cc)
+        {
 
-        if (RPNorNRPN == RPN)
-        {
-            param_MSB = &RPN_MSB[chan];
-            param_LSB = &RPN_LSB[chan];
-            paramNum = (*param_MSB << 7) | *param_LSB;
-        }
-        else // NRPN
-        {
-            param_MSB = &NRPN_MSB[chan];
-            param_LSB = &NRPN_LSB[chan];
-            paramNum = (*param_MSB << 7) | *param_LSB;
+            // RPNs are a 14bit address/parameters (CC100 and CC101) with a 14bit data value (CC6 and CC38). RPNs are defined by the MIDI association
+            // and must be used according to the various specifications and profiles that define them.
+
+            // NRPNs are manufacturer defined and can be used for pretty much anything. They use CC98 and CC99 for address/parameters.
+
+            // There is some confusion about DATA_INC and DATA_DEC as to whether they adjust DATA_MSB or DATA_LSB. In this implementation we
+            // will apply them to the data LSB.
+
+            // We are assuming that the data MSB will be always be sent prior to the data LSB, and will only process data when data LSB is received.
+            // This avoids potential zippering of values, and is increasingly the more common useage.
+
+            // The MIDI 2.0 MPE Profile requires this method when sending 14 bit RPN data.
+
+            case MIDI_CC_RPN_LSB:
+            {
+                RPN_LSB[chan] = val;
+                paramMode = MODE_RPN;
+                break;
+            }
+
+            case MIDI_CC_RPN_MSB:
+            {
+                RPN_MSB[chan] = val;
+                paramMode = MODE_RPN;
+                break;
+            }
+
+            case MIDI_CC_NRPN_LSB:
+            {
+                NRPN_LSB[chan] = val;
+                paramMode = MODE_NRPN;
+                break;
+            }
+
+            case MIDI_CC_NRPN_MSB:
+            {
+                NRPN_MSB[chan] = val;
+                paramMode = MODE_NRPN;
+                break;
+            }
+
+            case MIDI_CC_DATA_MSB:
+            {
+                if (paramMode == MODE_RPN)
+                {
+                    RPN_DATA_MSB[chan] = val; // wait for LSB
+                }
+                else if (paramMode == MODE_NRPN)
+                {
+                    NRPN_DATA_MSB[chan] = val; // wait for LSB
+                }
+                break;
+            }
+
+            // when we receive the LSB, we then emit the data
+            case MIDI_CC_DATA_LSB:
+            {
+                if (paramMode == MODE_RPN)
+                {
+                    RPN_DATA_LSB[chan] = val;
+                    emit signalRxMidi_RPN(chan, (RPN_MSB[chan] << 7) | (RPN_LSB[chan]), (RPN_DATA_MSB[chan] << 7) | (RPN_DATA_LSB[chan]));
+                }
+                else if (paramMode == MODE_NRPN)
+                {
+                    NRPN_DATA_LSB[chan] = val;
+                    emit signalRxMidi_NRPN(chan, (NRPN_MSB[chan] << 7) | (NRPN_LSB[chan]), (NRPN_DATA_MSB[chan] << 7) | (NRPN_DATA_LSB[chan]));
+                }
+                break;
+            }
+
+            case MIDI_CC_DATA_INC:
+            {
+                if (paramMode == MODE_RPN && RPN_DATA_LSB[chan] < 0xFF)
+                {
+                    RPN_DATA_LSB[chan]++;
+                    emit signalRxMidi_RPN(chan, (RPN_MSB[chan] << 7) | (RPN_LSB[chan]), (RPN_DATA_MSB[chan] << 7) | (RPN_DATA_LSB[chan]));
+                }
+                else if (paramMode == MODE_NRPN && NRPN_DATA_LSB[chan] < 0xFF)
+                {
+                    NRPN_DATA_LSB[chan]++;
+                    emit signalRxMidi_NRPN(chan, (NRPN_MSB[chan] << 7) | (NRPN_LSB[chan]), (NRPN_DATA_MSB[chan] << 7) | (NRPN_DATA_LSB[chan]));
+                }
+                break;
+            }
+
+            case MIDI_CC_DATA_DEC:
+            {
+                if (paramMode == MODE_RPN && RPN_DATA_LSB[chan] > 0)
+                {
+                    RPN_DATA_LSB[chan]--;
+                    emit signalRxMidi_RPN(chan, (RPN_MSB[chan] << 7) | (RPN_LSB[chan]), (RPN_DATA_MSB[chan] << 7) | (RPN_DATA_LSB[chan]));
+                }
+                else if (paramMode == MODE_NRPN && NRPN_DATA_LSB[chan] > 0)
+                {
+                    NRPN_DATA_LSB[chan]--;
+                    emit signalRxMidi_NRPN(chan, (NRPN_MSB[chan] << 7) | (NRPN_LSB[chan]), (NRPN_DATA_MSB[chan] << 7) | (NRPN_DATA_LSB[chan]));
+                }
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
         }
 
-        switch(cc)
-        {
-        case MIDI_CC_NRPN_LSB:
-            *param_LSB = val;
-            RPNorNRPN = NRPN;
-            break;
-        case MIDI_CC_NRPN_MSB:
-            *param_MSB = val;
-            RPNorNRPN = RPN;
-            break;
-        case MIDI_CC_RPN_LSB:
-            *param_LSB = val;
-            RPNorNRPN = NRPN;
-            break;
-        case MIDI_CC_RPN_MSB:
-            *param_MSB = val;
-            RPNorNRPN = RPN;
-            break;
-        case MIDI_CC_DATA_MSB:
-            slotRxParam(paramNum, val, chan, DATA_MSB); // set data MSB
-            break;
-        case MIDI_CC_DATA_LSB:
-            slotRxParam(paramNum, val, chan, DATA_LSB); // set data LSB
-            break;
-        case MIDI_CC_DATA_INC:
-            slotRxParam(paramNum, val, chan, DATA_INC); // should be +1, ignore val
-            break;
-        case MIDI_CC_DATA_DEC:
-            slotRxParam(paramNum, val, chan, DATA_DEC); // should be -1, ignore val
-            break;
-        // end reserved CCs
-        default:
-            emit signalRxMidi_controlChange(chan, cc, val);
-            break;
-        }
         break; // end CCs
 
     case MIDI_PROG_CHANGE:
@@ -1856,18 +1713,6 @@ void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
     case MIDI_RT_RESET:
         emit signalRxMidi_SysReset();
         break;
-    }
-}
-
-void MidiDeviceManager::slotRxParam(int param, uchar val, uchar chan, uchar messagetype)
-{
-    if (RPNorNRPN == RPN)
-    {
-        emit signalRxMidi_RPN(chan, param, val, messagetype);
-    }
-    else
-    {
-        emit signalRxMidi_NRPN(chan, param, val, messagetype);
     }
 }
 

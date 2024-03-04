@@ -24,10 +24,10 @@
 #define PID_SOFTSTEP_USB    12      // SoftStep post SSCOM, uses 11 as MIDI PID, hard coded portnames, uses MIDI PID 11
 #define PID_SOFTSTEP3       13      // hard coded portnames
 #define PID_SOFTSTEP_BL     14      // test this
-#define PID_12STEP_OLD      20      // two ports that get translated
-#define PID_12STEP          21      // hard coded portnames
-#define PID_12STEP_BL       22      // hard coded portnames
-#define PID_QUNEXUS         25      // three ports that get translated
+#define PID_12STEP1         20      // legacy ports that get translated
+#define PID_12STEP_BL       21      // hard coded portnames
+#define PID_12STEP2         22      // hard coded portnames
+#define PID_QUNEXUS         25      // legacy ports that get translated
 #define PID_KBOARD          26      // single port
 #define PID_APPL_CBL        27
 #define PID_QUNEO           30      // single port
@@ -115,32 +115,32 @@
     #define QUNEO_OUT_P1 "QuNeo"
 #endif
 
-// 12 Step old
+// 12 Step1
 
 #ifdef Q_OS_MAC
-    #define TWELVESTEP_OLD_IN_P1 "12Step Port 1"
-    #define TWELVESTEP_OLD_IN_P2 "12Step Port 2"
-    #define TWELVESTEP_OLD_OUT_P1 "12Step Port 1"
-    #define TWELVESTEP_OLD_OUT_P2 "12Step Port 2"
+    #define TWELVESTEP1_IN_P1 "12Step Port 1"
+    #define TWELVESTEP1_IN_P2 "12Step Port 2"
+    #define TWELVESTEP1_OUT_P1 "12Step Port 1"
+    #define TWELVESTEP1_OUT_P2 "12Step Port 2"
 #else
-    #define TWELVESTEP_OLD_IN_P1 "12Step"               // todo: test on windows
-    #define TWELVESTEP_OLD_IN_P2 "MIDIIN2 (12Step)"
-    #define TWELVESTEP_OLD_OUT_P1 "12Step"
-    #define TWELVESTEP_OLD_OUT_P2 "MIDIOUT2 (12Step)"
+    #define TWELVESTEP1_IN_P1 "12Step"
+    #define TWELVESTEP1_IN_P2 "MIDIIN2 (12Step)"
+    #define TWELVESTEP1_OUT_P1 "12Step"
+    #define TWELVESTEP1_OUT_P2 "MIDIOUT2 (12Step)"
 #endif
 
-// 12 Step current
+// 12 Step2
+
+#define TWELVESTEP_BL_PORT "12 Step Bootloader"
 
 #ifdef Q_OS_MAC
-    #define TWELVESTEP_IN_P1 "12 Step Control Surface"
-    #define TWELVESTEP_IN_P2 "12 Step Expander"
-    #define TWELVESTEP_OUT_P1 "12 Step Control Surface"
-    #define TWELVESTEP_OUT_P2 "12 Step Expander"
+    #define TWELVESTEP2_IN_P1 "12 Step2 Control Surface"
+    #define TWELVESTEP2_OUT_P1 "12 Step2 Control Surface"
+    #define TWELVESTEP2_OUT_P2 "12 Step2 TRS MIDI OUT"
 #else
-    #define TWELVESTEP_IN_P1 "12 Step"               // todo: test on windows
-    #define TWELVESTEP_IN_P2 "MIDIIN2 (12 Step)"
-    #define TWELVESTEP_OUT_P1 "12Step"
-    #define TWELVESTEP_OUT_P2 "MIDIOUT2 (12 Step)"
+    #define TWELVESTEP2_IN_P1 "12 Step2"               // todo: test on windows
+    #define TWELVESTEP2_OUT_P1 "12 Step2"
+    #define TWELVESTEP2_OUT_P2 "MIDIOUT2 (12 Step2)"
 #endif
 
 // SOFTSTEP SSCOM
