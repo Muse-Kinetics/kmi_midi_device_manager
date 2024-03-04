@@ -47,6 +47,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     lookupPID.insert(PID_SOFTSTEP1, "SoftStep1");
     lookupPID.insert(PID_SOFTSTEP2, "SoftStep2");
     lookupPID.insert(PID_SOFTSTEP_BL, "SoftStep Bootloader");
+    lookupPID.insert(PID_SOFTSTEP3, "SoftStep3");
     lookupPID.insert(PID_12STEP, "12 Step");
     lookupPID.insert(PID_QUNEXUS, "QuNexus");
     lookupPID.insert(PID_KBOARD, "K-Board");
@@ -993,6 +994,7 @@ void MidiDeviceManager::slotPollVersion()
         {
         case PID_SOFTSTEP1:
         case PID_SOFTSTEP2:
+        case PID_SOFTSTEP3:
             if ((uchar)deviceFirmwareVersion[0] < 1) // pre-bootloader firmware
             {
                 // version 98 is a placeholder for ZenDesk users and has a bootloader
@@ -1027,10 +1029,10 @@ void MidiDeviceManager::slotPollVersion()
             DM_OUT << "Bootloader command not configured for this device";
         }
 
-        if (PID != PID_SOFTSTEP1 && PID != PID_SOFTSTEP2)
-        {
-            emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
-        }
+//        if (PID != PID_SOFTSTEP1 && PID != PID_SOFTSTEP2)
+//        {
+//            emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
+//        }
 
         emit signalFwProgress(30); // increment progress bar
 
@@ -1286,7 +1288,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 // *************************************************
 void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::vector< unsigned char > *sysExMessageCharArray)
 {
-    DM_OUT << "slotProcessSysEx called - PID: " << PID << " deviceName: " << deviceName;
+    DM_OUT << "slotProcessSysEx called - PID: " << PID << " deviceName: " << deviceName << " length: " << sysExMessageByteArray.length();
 
     // ********************************************
     // Test for feedback loop
@@ -1446,7 +1448,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         DM_OUT << "Unrecognized Syx: " << QString::fromStdString(sysExMessageByteArray.toStdString());;
 #endif
 
-        //DM_OUT << "passing SysEx to applicaiton";
+        DM_OUT << "passing SysEx to applicaiton";
         // send SysEx to application
         emit signalRxSysExBA(sysExMessageByteArray);
         emit signalRxSysEx(sysExMessageCharArray);
@@ -1597,9 +1599,9 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
 
     uchar newStatus = status + (chan < 16 ? chan : 0); // combine status byte with any valid channel data
 
-//#ifdef MDM_DEBUG_ENABLED
+#ifdef MDM_DEBUG_ENABLED
     DM_OUT << QString("slotSendMIDI called - status: %1 d1: %2 d2: %3 channel: %4 newStatus: %5").arg(status).arg(d1).arg(d2).arg(chan).arg(newStatus);
-//#endif
+#endif
 
     std::vector<uchar> packet;
     packet.clear();
