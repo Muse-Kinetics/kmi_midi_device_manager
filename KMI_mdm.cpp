@@ -183,6 +183,7 @@ bool MidiDeviceManager::slotUpdatePortIn(int port)
         return 1;
     }
     slotCloseMidiIn(SIGNAL_SEND); // close the port if we failed
+    kmiPorts->slotRefreshPortMaps(); // kick it
     return 0;
 }
 
@@ -196,6 +197,7 @@ bool MidiDeviceManager::slotUpdatePortOut(int port)
         return 1;
     }
     slotCloseMidiOut(SIGNAL_SEND); // close the port if we failed
+    kmiPorts->slotRefreshPortMaps(); // kick it
     return 0;
 }
 
@@ -264,9 +266,10 @@ bool MidiDeviceManager::slotOpenMidiIn()
     }
 
     // first close the port to avoid errors
-    if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
-
-    //midi_in = new RtMidiIn(); // refresh RtMidi
+    if (port_out_open)
+    {
+        if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
+    }
 
     try
     {
@@ -326,9 +329,10 @@ bool MidiDeviceManager::slotOpenMidiOut()
     }
 
     // first close the port to avoid errors
-    if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
-
-    //midi_out = new RtMidiOut(); // refresh instance
+    if (port_out_open)
+    {
+        if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
+    }
 
     try
     {
@@ -409,12 +413,17 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
             callbackIsSet = false;
         }
 
+#ifdef Q_OS_WINDOWS
+        delete midi_in;
+        midi_in = new RtMidiIn();
+#else
         if (bootloaderMode)
         {
             DM_OUT << "left bootloader, deleting/renewing midi_in";
             delete midi_in;
             midi_in = new RtMidiIn();
         }
+#endif
     }
     catch (RtMidiError &error)
     {
@@ -458,6 +467,10 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
         //close ports
         midi_out->closePort();
 
+#ifdef Q_OS_WINDOWS
+        delete midi_in;
+        midi_in = new RtMidiIn();
+#else
         if (bootloaderMode)
         {
             DM_OUT << "left bootloader, deleting/renewing midi_out";
@@ -465,6 +478,7 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
             midi_out = new RtMidiOut();
             bootloaderMode = false;
         }
+#endif
     }
     catch (RtMidiError &error)
     {
@@ -611,6 +625,7 @@ void MidiDeviceManager::slotStopPolling(QString caller) // this has to be called
 
 void MidiDeviceManager::slotPollVersion()
 {
+    static bool installingBootloader = false;
     bool portsAreSetUp = (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open) ? false : true;
 
     //DM_OUT << "slotPollVersion called - pollingStatus: " << pollingStatus << " firmwareUpdateState: " << firmwareUpdateState << " portsAreSetUp: " << portsAreSetUp << " bootloaderMode:" << bootloaderMode << " fwVerPollSkipConnectCycles: " << fwVerPollSkipConnectCycles;
@@ -628,6 +643,7 @@ void MidiDeviceManager::slotPollVersion()
     case FWUD_STATE_IDLE:
         break;
     case FWUD_STATE_BEGIN:
+        installingBootloader = false;
         DM_OUT << "Begin Firmware Update Process - fwSaveRestoreGlobals: " << fwSaveRestoreGlobals;
         if (bootloaderMode)
         {
@@ -694,6 +710,7 @@ void MidiDeviceManager::slotPollVersion()
                 if (((uchar)deviceFirmwareVersion[0] == 9 && (uchar)deviceFirmwareVersion[1] < 8) ||
                      (uchar)deviceFirmwareVersion[0] < 9)
                 {
+                    installingBootloader = true;
                     emit signalFwConsoleMessage("\n\n*** Installing bootloader *** - device will reboot several times!\n");
 
                     //DM_OUT << "fwVerPollSkipConnectCycles = 2";
@@ -709,6 +726,7 @@ void MidiDeviceManager::slotPollVersion()
             }
             else // this is the standard method to enter bootloader mode, once a bootloader is installed
             {
+                installingBootloader = false;
                 emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
                 if (PID == PID_SOFTSTEP1 || PID == PID_SOFTSTEP2)
                 {
@@ -733,6 +751,7 @@ void MidiDeviceManager::slotPollVersion()
 
         if (PID != PID_SOFTSTEP1 && PID != PID_SOFTSTEP2 && PID != PID_12STEP1 && PID != PID_12STEP2)
         {
+            installingBootloader = false;
             emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
         }
 
@@ -744,15 +763,15 @@ void MidiDeviceManager::slotPollVersion()
     case FWUD_STATE_BL_SENT_WAIT:
         DM_OUT << "Bootloader image/command sent, waiting..." << firmwareUpdateStateTimer.elapsed();
 
-//        if (remainingSeconds == 20 ||remainingSeconds == 10)
-//        {
-//            kmiPorts->slotRefreshPortMaps(); // kick it
-//        }
-//        if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
-//        {
-//            DM_OUT << "Sending SysEx ID version request (again)";
-//            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
-//        }
+        if (remainingSeconds == 20 ||remainingSeconds == 10)
+        {
+            kmiPorts->slotRefreshPortMaps(); // kick it
+        }
+        if (remainingSeconds == 22 || remainingSeconds == 12 || remainingSeconds == 5)
+        {
+            DM_OUT << "Sending SysEx ID version request (again)";
+            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+        }
 
         if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
         {
@@ -761,6 +780,22 @@ void MidiDeviceManager::slotPollVersion()
         break;
     case FWUD_STATE_BL_MODE:
         DM_OUT << "Device in bootloader mode";
+
+#ifdef Q_OS_WINDOWS
+        if (installingBootloader)
+        {
+
+            DM_OUT << "Bootloader Install Successful!" << firmwareUpdateStateTimer.elapsed();
+            emit signalFwConsoleMessage("\nBootloader installed, the application will now re-launch and install firmware.");
+            emit signalFirmwareUpdateComplete(true);
+            firmwareUpdateState = FWUD_STATE_IDLE;
+            //DM_OUT << "fwVerPollSkipConnectCycles = 0";
+            fwVerPollSkipConnectCycles = 0;
+            connected = false;
+            break;
+        }
+#endif
+
 
         emit signalFwConsoleMessage("\nDevice bootloader detected.\n"); // confirm enter bootloader and next line
         emit signalFwProgress(40); // increment progress bar
@@ -807,13 +842,15 @@ void MidiDeviceManager::slotPollVersion()
         if (remainingSeconds == 20 ||remainingSeconds == 10)
         {
             // EB TODO - are these lines necessary? Didn't need for 12 Step, does it break other devices? Windows?
-            //kmiPorts->slotRefreshPortMaps(); // kick it
+            slotCloseMidiIn(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+            slotCloseMidiOut(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+            kmiPorts->slotRefreshPortMaps(); // kick it
         }
-        if (remainingSeconds == 25 || remainingSeconds == 15 || remainingSeconds == 5)
+        if (remainingSeconds == 22 || remainingSeconds == 12 || remainingSeconds == 5)
         {
             // EB TODO - are these lines necessary? Didn't need for 12 Step, does it break other devices? Windows?
             //DM_OUT << "Sending SysEx ID version request (again)";
-            //slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
+            slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
         }
 
         if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
@@ -993,6 +1030,9 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     {
         DM_OUT << "SYSEX SEND ERR:" << (QString::fromStdString(error.getMessage()));
         emit signalFwConsoleMessage("SYSEX SEND ERR:" + (QString::fromStdString(error.getMessage())));
+        slotCloseMidiIn(SIGNAL_SEND);
+        slotCloseMidiOut(SIGNAL_SEND);
+        kmiPorts->slotRefreshPortMaps(); // kick it
     }
 
     ioGate = true; // reopen gate
@@ -1021,6 +1061,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         this->disconnect(SIGNAL(signalRxMidi_raw(uchar, uchar, uchar, uchar)));
         slotCloseMidiIn(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
         slotCloseMidiOut(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+        kmiPorts->slotRefreshPortMaps(); // kick it
         emit signalFeedbackLoopDetected(this);
         slotErrorPopup("MIDI FEEDBACK LOOP DETECTED\nPorts Closed");
     }
@@ -1431,7 +1472,10 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
                 {
                     QString errorString = QString("MIDI SEND PACKET ERR: %1 \n Size: %2").arg(QString::fromStdString(error.getMessage()), QString::number(packet.size()));
                     DM_OUT << errorString;
-                    emit signalFwConsoleMessage(errorString);
+                    slotCloseMidiIn(SIGNAL_SEND);
+                    slotCloseMidiOut(SIGNAL_SEND);
+                    kmiPorts->slotRefreshPortMaps(); // kick it
+                    //emit signalFwConsoleMessage(errorString);
                 }
                 message.clear(); // Clear the message vector for the next message
             }
@@ -1452,7 +1496,10 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
             {
                 QString errorString = QString("MIDI SEND PACKET ERR: %1 \n Size: %2").arg(QString::fromStdString(error.getMessage()), QString::number(packet.size()));
                 DM_OUT << errorString;
-                emit signalFwConsoleMessage(errorString);
+                //emit signalFwConsoleMessage(errorString);
+                slotCloseMidiIn(SIGNAL_SEND);
+                slotCloseMidiOut(SIGNAL_SEND);
+                kmiPorts->slotRefreshPortMaps(); // kick it
             }
         }
     }
