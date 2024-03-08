@@ -120,6 +120,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 
     // let's replace all of these flags with a single state variable
     firmwareUpdateState = FWUD_STATE_IDLE;
+    installingBootloader = BL_INSTALL_FALSE;
     firmwareUpdateStateTimer.start(); // a timer to track elapsed ms since last state change
     fwVerPollSkipConnectCycles = 0;
     firstFwVerRequestHasBeenSent = false;
@@ -449,6 +450,11 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
     midiSendTimer.stop();
     portName_out = "";
 
+    if (firmwareUpdateState == FWUD_STATE_BL_MODE && installingBootloader == BL_INSTALL_PENDING)
+    {
+        installingBootloader = BL_INSTALL_DEVICE_DISCONNECTED;
+    }
+
     // alert host application that we are disconnected
     if (connected) // check so we only emit once
     {
@@ -625,7 +631,7 @@ void MidiDeviceManager::slotStopPolling(QString caller) // this has to be called
 
 void MidiDeviceManager::slotPollVersion()
 {
-    static bool installingBootloader = false;
+    QString thisVersion;
     bool portsAreSetUp = (port_in == -1 || port_out == -1 || !port_in_open || !port_out_open) ? false : true;
 
     //DM_OUT << "slotPollVersion called - pollingStatus: " << pollingStatus << " firmwareUpdateState: " << firmwareUpdateState << " portsAreSetUp: " << portsAreSetUp << " bootloaderMode:" << bootloaderMode << " fwVerPollSkipConnectCycles: " << fwVerPollSkipConnectCycles;
@@ -633,7 +639,10 @@ void MidiDeviceManager::slotPollVersion()
 
     int remainingSeconds = round((FW_UPDATE_TIMEOUT_INTERVAL - firmwareUpdateStateTimer.elapsed()) / 1000);
 
-    if (firmwareUpdateState > FWUD_STATE_BEGIN && firmwareUpdateStateTimer.elapsed() > (FW_UPDATE_TIMEOUT_INTERVAL - 10000))
+    if (    firmwareUpdateState > FWUD_STATE_BEGIN &&
+            firmwareUpdateStateTimer.elapsed() > (FW_UPDATE_TIMEOUT_INTERVAL - 10000) &&
+            installingBootloader != BL_INSTALL_COMPLETE
+       )
     {
         if (remainingSeconds > 0) emit signalFwConsoleMessage(QString("\nTimeout in %1...").arg(remainingSeconds));
     }
@@ -643,7 +652,7 @@ void MidiDeviceManager::slotPollVersion()
     case FWUD_STATE_IDLE:
         break;
     case FWUD_STATE_BEGIN:
-        installingBootloader = false;
+        installingBootloader = BL_INSTALL_FALSE;
         DM_OUT << "Begin Firmware Update Process - fwSaveRestoreGlobals: " << fwSaveRestoreGlobals;
         if (bootloaderMode)
         {
@@ -710,12 +719,13 @@ void MidiDeviceManager::slotPollVersion()
                 if (((uchar)deviceFirmwareVersion[0] == 9 && (uchar)deviceFirmwareVersion[1] < 8) ||
                      (uchar)deviceFirmwareVersion[0] < 9)
                 {
-                    installingBootloader = true;
+                    installingBootloader = BL_INSTALL_PENDING;
                     emit signalFwConsoleMessage("\n\n*** Installing bootloader *** - device will reboot several times!\n");
 
                     //DM_OUT << "fwVerPollSkipConnectCycles = 2";
                     fwVerPollSkipConnectCycles = 1; // don't send fw version request during bootloader install
 
+                    Sleep(1000); // wait 1 second for console to update
                     // this will:
                     // - install the trojan horse firmware image
                     // - reboot the device
@@ -726,7 +736,7 @@ void MidiDeviceManager::slotPollVersion()
             }
             else // this is the standard method to enter bootloader mode, once a bootloader is installed
             {
-                installingBootloader = false;
+                installingBootloader = BL_INSTALL_FALSE;
                 emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
                 if (PID == PID_SOFTSTEP1 || PID == PID_SOFTSTEP2)
                 {
@@ -751,7 +761,7 @@ void MidiDeviceManager::slotPollVersion()
 
         if (PID != PID_SOFTSTEP1 && PID != PID_SOFTSTEP2 && PID != PID_12STEP1 && PID != PID_12STEP2)
         {
-            installingBootloader = false;
+            installingBootloader = BL_INSTALL_FALSE;
             emit signalFwConsoleMessage("\nSending Enter bootloader Command, device will reboot.\n");
         }
 
@@ -782,11 +792,17 @@ void MidiDeviceManager::slotPollVersion()
         DM_OUT << "Device in bootloader mode";
 
 #ifdef Q_OS_WINDOWS
-        if (installingBootloader)
+        if (installingBootloader == BL_INSTALL_PENDING)
         {
 
-            DM_OUT << "Bootloader Install Successful!" << firmwareUpdateStateTimer.elapsed();
-            emit signalFwConsoleMessage("\nBootloader installed, the application will now re-launch and install firmware.");
+            DM_OUT << "Bootloader Install Successful, please disconnect your device!" << firmwareUpdateStateTimer.elapsed();
+            emit signalFwConsoleMessage("\nBootloader installed successfully, please disconnect your device now!");
+            break;
+        }
+        else if (installingBootloader == BL_INSTALL_DEVICE_DISCONNECTED)
+        {
+            installingBootloader = BL_INSTALL_COMPLETE;
+            emit signalFwConsoleMessage("\nThe application will now re-launch. Wait to reconnect your device until after the application has loaded.");
             emit signalFirmwareUpdateComplete(true);
             firmwareUpdateState = FWUD_STATE_IDLE;
             //DM_OUT << "fwVerPollSkipConnectCycles = 0";
@@ -869,6 +885,13 @@ void MidiDeviceManager::slotPollVersion()
         DM_OUT << "Firmware Update Successful!" << firmwareUpdateStateTimer.elapsed();
 
         emit signalFirmwareUpdateComplete(true);
+
+        thisVersion = QString("%1.%2.%3").arg((uchar)deviceFirmwareVersion[0]).arg((uchar)deviceFirmwareVersion[1]).arg((uchar)deviceFirmwareVersion[2]);
+        emit signalFwConsoleMessage("\nFirmware successfully updated to " + thisVersion + "\n");
+#ifdef Q_OS_WINDOWS
+        emit signalFwConsoleMessage("\nThe application will re-launch, please disconnect your device now and wait to reconnect until after the application has loaded. ");
+#endif
+
         firmwareUpdateState = FWUD_STATE_IDLE;
         //DM_OUT << "fwVerPollSkipConnectCycles = 0";
         fwVerPollSkipConnectCycles = 0;
@@ -942,6 +965,7 @@ void MidiDeviceManager::slotPollVersion()
             fwVerRequestTimer.restart();
             if (requestSent == true)
             {
+
                 emit signalFwConsoleMessage("\nRequesting firmware version from device...");
             }
         }
@@ -1029,7 +1053,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     catch (RtMidiError &error)
     {
         DM_OUT << "SYSEX SEND ERR:" << (QString::fromStdString(error.getMessage()));
-        emit signalFwConsoleMessage("SYSEX SEND ERR:" + (QString::fromStdString(error.getMessage())));
+        //emit signalFwConsoleMessage("SYSEX SEND ERR:" + (QString::fromStdString(error.getMessage())));
         slotCloseMidiIn(SIGNAL_SEND);
         slotCloseMidiOut(SIGNAL_SEND);
         kmiPorts->slotRefreshPortMaps(); // kick it
