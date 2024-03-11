@@ -31,10 +31,10 @@ void kmiSpinBoxUpDown::setupButtons() {
     setButtonSymbols(QAbstractSpinBox::NoButtons);
 
     // setup icons
-    iconUpButton = ":/ui/ui_images/arrow-up_pressed.svg";
-    iconUpButtonPressed = ":/ui/ui_images/arrow-up.svg";
-    iconDownButton = ":/ui/ui_images/arrow-down_pressed.svg";
-    iconUDownButtonPressed = ":/ui/ui_images/arrow-down.svg";
+    iconUpButton = ":/ui/images/arrow-up_pressed.svg";
+    iconUpButtonPressed = ":/ui/images/arrow-up.svg";
+    iconDownButton = ":/ui/images/arrow-down_pressed.svg";
+    iconUDownButtonPressed = ":/ui/images/arrow-down.svg";
 
     // Create custom up and down buttons
     upButton = new QPushButton(this);

@@ -72,7 +72,7 @@ QComboBox::down-arrow
 {
 	border: none;
 	background: none;
-	image: url(:/ui/ui_images/combobox_menu_arrows.svg);
+	image: url(:/ui/images/combobox_menu_arrows.svg);
 	padding-right: 15px;
 }
 
@@ -403,7 +403,6 @@ QSlider::sub-page:vertical
    </property>
    <property name="font">
     <font>
-     <family>Open Sans</family>
      <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
@@ -431,7 +430,6 @@ border: 2px solid blue;</string>
    </property>
    <property name="font">
     <font>
-     <family>Open Sans</family>
      <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
@@ -459,7 +457,6 @@ border: 2px solid white;</string>
    </property>
    <property name="font">
     <font>
-     <family>Open Sans</family>
      <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
@@ -487,7 +484,6 @@ border: 2px solid rgb(0,255,0);</string>
    </property>
    <property name="font">
     <font>
-     <family>Open Sans</family>
      <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
@@ -515,7 +511,6 @@ border: 2px solid red;</string>
    </property>
    <property name="font">
     <font>
-     <family>Open Sans</family>
      <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
@@ -543,7 +538,6 @@ border: 2px solid white;</string>
    </property>
    <property name="font">
     <font>
-     <family>Open Sans</family>
      <pointsize>12</pointsize>
      <italic>false</italic>
      <bold>false</bold>
@@ -594,7 +588,6 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="font">
     <font>
-     <family>Futura PT</family>
      <pointsize>18</pointsize>
      <italic>false</italic>
      <bold>false</bold>

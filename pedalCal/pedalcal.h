@@ -8,6 +8,7 @@
 #include <QVariant>
 #include <QSettings>
 
+
 namespace Ui {
 class pedalCal;
 }

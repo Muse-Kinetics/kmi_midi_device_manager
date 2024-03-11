@@ -16,20 +16,34 @@
 #include <QLineEdit>
 #include <QFile>
 #include <QSettings>
+#include <QPalette>
 
-#include <sysexcmds.h>
 #include <cvCalData.h>
 #include <kmiSpinBoxUpDown.h>
 #include <midi.h> // max midi channels
-#include <sysex.h> // packet types
+#include <device_includes.h>
 
-#define CURRENT_CV_CAL_VERSION 1
 
 enum
 {
     CV_OUT1,
     CV_OUT2
 };
+
+enum
+{
+    CV_CAL_MODE_FACTORY,
+    CV_CAL_MODE_OCTAVES,
+    CV_CAL_MODE_NOTES
+};
+
+typedef struct
+{
+    int8_t version;
+    uint8_t cal_mode;
+    uint16_t octaves[NUM_CV_OUTS][NUM_CV_OCTAVES];
+    uint16_t notes[NUM_CV_OUTS][NUM_CV_NOTES];
+} PACK_INLINE CV_CALIBRATION;
 
 typedef struct {
     uint8_t data[278];
