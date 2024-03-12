@@ -65,6 +65,14 @@ enum
     FWUD_STATE_FAIL
 };
 
+enum
+{
+    BL_INSTALL_FALSE,
+    BL_INSTALL_PENDING,
+    BL_INSTALL_DEVICE_DISCONNECTED,
+    BL_INSTALL_COMPLETE
+};
+
 class MidiDeviceManager : public QWidget
 {
     Q_OBJECT
@@ -130,6 +138,7 @@ public:
     bool pollingStatus;
 
     int firmwareUpdateState;
+    int installingBootloader;
     QElapsedTimer firmwareUpdateStateTimer;
     int fwVerPollSkipConnectCycles; // set this count to not send fwver request for x connect cycles
     QElapsedTimer fwVerRequestTimer; // time since the last fwver request was sent

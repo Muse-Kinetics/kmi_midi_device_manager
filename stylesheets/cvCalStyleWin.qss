@@ -44,7 +44,7 @@ QSpinBox::up-button {
         padding: 0 0;
     subcontrol-origin: border;
     subcontrol-position: top right; /* Position can be adjusted if needed */
-    image: url(:/ui/ui_images/arrow-up.svg);
+    image: url(:/ui/images/arrow-up.svg);
 }
 
 
@@ -54,7 +54,7 @@ QSpinBox::down-button {
    padding: 0 0;
     subcontrol-origin: border;
     subcontrol-position: bottom right; /* Position can be adjusted if needed */
-    image: url(:/ui/ui_images/arrow-down.svg);
+    image: url(:/ui/images/arrow-down.svg);
 }
 
 
@@ -163,7 +163,7 @@ QComboBox::down-arrow
 {
     border: none;
     background: none;
-    image: url(:/ui/ui_images/combobox_menu_arrows.svg);
+    image: url(:/ui/images/combobox_menu_arrows.svg);
     padding-right: 12px;
     width: 12px;
     height: 12px;
@@ -188,7 +188,7 @@ QComboBox::down-arrow
 {
         border: none;
         background: none;
-        image: url(:/ui/ui_images/combobox_menu_arrows.svg);
+        image: url(:/ui/images/combobox_menu_arrows.svg);
         padding-right: 15px;
 }
 
