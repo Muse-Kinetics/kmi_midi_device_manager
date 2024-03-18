@@ -39,6 +39,8 @@
 MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objectNameInit, KMI_Ports *kmiP) :
     QWidget(parent)
 {
+    sessionSettings = new QSettings(this);
+
     kmiPorts = kmiP; // store this now
 
     // putting these here for now but ideally this should be in a common database/table    
@@ -108,7 +110,7 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     port_out_open = false;
     callbackIsSet = false;
 
-//    firstFwResponseReceived = false;
+    ignoreFwVersionCheck = sessionSettings->value("IGNORE_FW_CHECKS", false).toBool();
 
     fwSaveRestoreGlobals = false;
 
@@ -1243,21 +1245,11 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     }
 
     // ********************************************
-    // Evaluate fw version reply data
-    // ********************************************
-
-
-//    // only allow 1 version response every 2 seconds
-//    if (!versionReplyTimer.hasExpired(2000) && firstFwResponseReceived == true) return;
-
-//    firstFwResponseReceived = true; // now we can use the timer
-//    versionReplyTimer.restart();
-
-    // ********************************************
     // process firmware version connection messages
     // ********************************************
 
-    //pollingStatus = false;
+    // update this check from session settings
+    ignoreFwVersionCheck = sessionSettings->value("IGNORE_FW_CHECKS", false).toBool();
 
     if (bootloaderMode)
     {
@@ -1275,7 +1267,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         }
     }
     // firmware matches
-    else if (deviceFirmwareVersion == applicationFirmwareVersion)
+    else if (deviceFirmwareVersion == applicationFirmwareVersion || ignoreFwVersionCheck)
     {
         DM_OUT << "emit fw match - fwv: " << deviceFirmwareVersion << "cfwv: " << applicationFirmwareVersion;
 
@@ -1503,6 +1495,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
                     kmiPorts->slotRefreshPortMaps(); // kick it
                     //emit signalFwConsoleMessage(errorString);
                 }
+                qDebug() << "Clear Packet1";
                 message.clear(); // Clear the message vector for the next message
             }
         }
@@ -1532,6 +1525,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 
     // Clear the packet after processing all messages
     packet.clear();
+    qDebug() << "Clear Packet2";
 }
 
 void MidiDeviceManager::slotInitNRPN()
@@ -1630,7 +1624,9 @@ void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
         cc = data1;
         val = data2;
 
-        switch (cc)
+        emit signalRxMidi_controlChange(chan, data1, data2); // emit all CCs, including NRPN related ones
+
+        switch (cc) // also parse NRPN messaging
         {
 
             // RPNs are a 14bit address/parameters (CC100 and CC101) with a 14bit data value (CC6 and CC38). RPNs are defined by the MIDI association
@@ -1735,6 +1731,7 @@ void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
 
             default:
             {
+
                 break;
             }
         }

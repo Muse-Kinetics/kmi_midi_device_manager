@@ -258,8 +258,10 @@ void pedalCal::slotCalculateOutput()
 
 /*
     The factory settings json file does not contain pedal calibration values. The first
-    time a user saves/sends calibtation data, we write it to settings.json and thereafter
+    time a user saves/sends calibration data, we write it to settings.json and thereafter
     we will load that data when the calibration window is loaded.
+
+    EB note: on SoftStep this isn't true, we've loaded default values into the settings map
 */
 void pedalCal::slotLoadJSONCalibrationValues(QVariantMap settings)
 {

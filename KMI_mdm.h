@@ -82,6 +82,8 @@ public:
     // from device
     static void midiInCallback ( double deltatime, std::vector< unsigned char > *message, void *userData );
 
+    QSettings *sessionSettings;
+
     // product ID
     int PID;
     int initPID;
@@ -92,7 +94,7 @@ public:
     bool port_in_open;          // flag if device input port is available and open
     bool port_out_open;         // flag if device output port is available and open
 
-//    bool firstFwResponseReceived; // make sure we catch the first response if device is connected when the app launches
+    bool ignoreFwVersionCheck;  // allow editor to talk to any version of the hardware
 
     int port_in, port_out;      // the current port in/out numbers
     QString portName_in, portName_out; // the port names of the in/out ports
@@ -133,8 +135,6 @@ public:
     bool fwSaveRestoreGlobals; // set this flag to backup and restore globals before/after a firmware update
 //    bool globalsRequested; // flag if we are storing global data to restore after update
     bool bootloaderMode;
-//    bool fwUpdateRequested;
-//    bool hackStopTimer;
     bool pollingStatus;
 
     int firmwareUpdateState;
@@ -145,19 +145,6 @@ public:
     bool firstFwVerRequestHasBeenSent; // set this high the first time we send a request, if false then don't wait for timer
 
     QTimer* versionPoller;
-
-
-//    QTimer* timeoutFwBl;
-//    QTimer* timeoutGlobalsReq;
-
-
-//    QElapsedTimer versionReplyTimer;
-//    QElapsedTimer refreshTimer;
-//    QElapsedTimer delayFwTimer;
-
-    // counters to timeout timers
-//    unsigned char pollTimeout;
-//    int globalsTimerCount;
 
     // stops MIDI if sysex is sending
     bool ioGate;
