@@ -19,10 +19,11 @@
 
 #define PID_AUX             0
 #define PID_STRINGPORT      1
-#define PID_SOFTSTEP1       10      // legacy ports that get translated
-#define PID_SOFTSTEP2       11      // legacy ports that get translated
-#define PID_SOFTSTEP_USB    12      // uses 11 as MIDI PID, hard coded portnames, uses MIDI PID 11
-#define PID_SOFTSTEP_BL     13      // hard coded portnames
+#define PID_SOFTSTEP1       10      // two ports that get translated (SSCOM)
+#define PID_SOFTSTEP2       11      // two ports that get translated (SSCOM)
+#define PID_SOFTSTEP_USB    12      // SoftStep post SSCOM, uses 11 as MIDI PID, hard coded portnames, uses MIDI PID 11
+#define PID_SOFTSTEP3       13      // hard coded portnames
+#define PID_SOFTSTEP_BL     14      // test this
 #define PID_12STEP1         20      // legacy ports that get translated
 #define PID_12STEP_BL       21      // hard coded portnames
 #define PID_12STEP2         22      // hard coded portnames

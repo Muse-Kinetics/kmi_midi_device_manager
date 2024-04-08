@@ -15,5 +15,16 @@
         <file>stylesheets/appDialog_QuNexus.qss</file>
         <file>stylesheets/appDialog_QuNexus_WIN.qss</file>
         <file>stylesheets/menuBarWin.qss</file>
+        <file>stylesheets/pedalCalStylesWin.qss</file>
+        <file>stylesheets/pedalCalStlyesMac.qss</file>
+        <file>stylesheets/cvCalStyleWin.qss</file>
+        <file>stylesheets/cvCalStyleMac.qss</file>
+    </qresource>
+    <qresource prefix="/ui">
+        <file>images/arrow-down_pressed.svg</file>
+        <file>images/arrow-up_pressed.svg</file>
+        <file>images/arrow-up.svg</file>
+        <file>images/arrow-down.svg</file>
+        <file>images/combobox_menu_arrows.svg</file>
     </qresource>
 </RCC>

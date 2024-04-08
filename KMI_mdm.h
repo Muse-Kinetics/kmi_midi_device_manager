@@ -82,6 +82,8 @@ public:
     // from device
     static void midiInCallback ( double deltatime, std::vector< unsigned char > *message, void *userData );
 
+    QSettings *sessionSettings;
+
     // product ID
     int PID;
     int initPID;
@@ -92,13 +94,12 @@ public:
     bool port_in_open;          // flag if device input port is available and open
     bool port_out_open;         // flag if device output port is available and open
 
-//    bool firstFwResponseReceived; // make sure we catch the first response if device is connected when the app launches
+    bool ignoreFwVersionCheck;  // allow editor to talk to any version of the hardware
 
     int port_in, port_out;      // the current port in/out numbers
     QString portName_in, portName_out; // the port names of the in/out ports
 
     bool restart;               // flag to halt all actions and restart the app
-//    bool failFlag;              // used to abort processes like slotResetConnections
 
     // RtMidi devices
     RtMidiIn *midi_in;
@@ -131,38 +132,27 @@ public:
 
     //Describes whether or not a fw update has been requested-- useful for managing bootloader reconnects
     bool fwSaveRestoreGlobals; // set this flag to backup and restore globals before/after a firmware update
-//    bool globalsRequested; // flag if we are storing global data to restore after update
     bool bootloaderMode;
-//    bool fwUpdateRequested;
-//    bool hackStopTimer;
     bool pollingStatus;
 
-    int firmwareUpdateState;
-    int installingBootloader;
+    int firmwareUpdateState;    // state of fw update process
+    int installingBootloader;   // state of bootloader install process
     QElapsedTimer firmwareUpdateStateTimer;
     int fwVerPollSkipConnectCycles; // set this count to not send fwver request for x connect cycles
     QElapsedTimer fwVerRequestTimer; // time since the last fwver request was sent
     bool firstFwVerRequestHasBeenSent; // set this high the first time we send a request, if false then don't wait for timer
 
+    QElapsedTimer syxExTxChunkTimer; // speed limit for chunk transmission
+    unsigned int sysExTxChunkSize; // if 0 then send at once, if non-zero then break sysex into chunks this many bytes in size
+    unsigned int sysExTxChunkDelay; // if 0 then send at once, if non-zero then wait this many ms between chunks
+
     QTimer* versionPoller;
-
-
-//    QTimer* timeoutFwBl;
-//    QTimer* timeoutGlobalsReq;
-
-
-//    QElapsedTimer versionReplyTimer;
-//    QElapsedTimer refreshTimer;
-//    QElapsedTimer delayFwTimer;
-
-    // counters to timeout timers
-//    unsigned char pollTimeout;
-//    int globalsTimerCount;
 
     // stops MIDI if sysex is sending
     bool ioGate;
 
-#define MAX_MIDI_PACKET_SIZE 64
+#define MAX_MIDI_SYSEX_SIZE 150000 // this is the check when sending sysex
+#define MAX_MIDI_PACKET_SIZE 64 // this is the check when building channel/common messages
     std::vector<uchar> packet; // packet to stuff outgoing midi packets into (not sysex)
     QTimer midiSendTimer;
 

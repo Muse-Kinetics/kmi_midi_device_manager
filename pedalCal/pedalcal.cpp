@@ -56,29 +56,19 @@ pedalCal::pedalCal(QWidget *parent) :
     QString textEditHTML = R"(
         <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
         <html>
-        <head>
-            <meta name="qrichtext" content="1" />
-            <meta charset="utf-8" />
-            <style type="text/css">
-                p, li { white-space: pre-wrap; }
-            </style>
-        </head>
-        <body style="font-family:'Open Sans'; font-size:10pt; font-weight:400; font-style:normal;">
-            <p style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">
-                <span style="font-size:11pt;">
+        <body style="font-family:'Open Sans'; font-size:11pt; font-weight:400; font-style:normal;">
                     1. Plug in your expression pedal.<br /><br />
                     2. Adjust the expression pedal from heel to toe and observe the live values on the left slider. The middle slider adjusts the min and max thresholds, and the right slider shows the calibrated output value.<br /><br />
                     3. Put the expression pedal at the zero (heel) position. Adjust the min threshold (middle slider, bottom/blue handle) until the output slider value is zero.<br /><br />
                     4. Put the expression pedal at the max (toe) position. Adjust the max threshold (middle slider, top/red handle) until the output slider value is 127.<br /><br />
                     5. When satisfied, click [save] to send the calibration values to the device.<br />
-                </span>
-            </p>
+
         </body>
         </html>
         )";
 
 
-    QFile *pedalStyleFile = new QFile(":/inc/KMI_KMDM/pedalCal/pedalCalStlyesMac.qss");
+    QFile *pedalStyleFile = new QFile(":/stylesheets/pedalCalStlyesMac.qss");
 #else // windows/linux
 
     QString textEditHTML = R"(
@@ -95,7 +85,7 @@ pedalCal::pedalCal(QWidget *parent) :
         </html>
         )";
 
-    QFile *pedalStyleFile = new QFile(":/inc/KMI_KMDM/pedalCal/pedalCalStylesWin.qss");
+    QFile *pedalStyleFile = new QFile(":/stylesheets/pedalCalStylesWin.qss");
 #endif
 
     ui->text_instructions->setHtml(textEditHTML);
@@ -268,8 +258,10 @@ void pedalCal::slotCalculateOutput()
 
 /*
     The factory settings json file does not contain pedal calibration values. The first
-    time a user saves/sends calibtation data, we write it to settings.json and thereafter
+    time a user saves/sends calibration data, we write it to settings.json and thereafter
     we will load that data when the calibration window is loaded.
+
+    EB note: on SoftStep this isn't true, we've loaded default values into the settings map
 */
 void pedalCal::slotLoadJSONCalibrationValues(QVariantMap settings)
 {

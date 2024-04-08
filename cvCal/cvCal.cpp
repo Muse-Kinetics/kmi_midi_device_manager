@@ -3,7 +3,7 @@
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #include "cvCal.h"
 #include "ui_cvCal.h"
-#include <QPalette>
+
 
 
 cvCal::cvCal(QWidget *parent) :
@@ -51,30 +51,20 @@ You can directly control the CVs with 12 bit values by using NRPN 1 for CV1, and
     )";
 
 
-    cvStyleFile = new QFile(":/inc/KMI_KMDM/cvCal/cvCalStyleWin.qss");
+    cvStyleFile = new QFile(":/stylesheets/cvCalStyleWin.qss");
 #else
 
     QString textEditHTML = R"(
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
     <html>
-    <head>
-        <meta name="qrichtext" content="1" />
-        <meta charset="utf-8" />
-        <style type="text/css">
-            p, li { white-space: pre-wrap; }
-        </style>
-    </head>
-    <body style="font-family:'Open Sans'; font-size:11pt; font-weight:400; font-style:normal;">
-        <p style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">
-            Each 12bit value (0-4095) is a scaling calibration value for the listed voltage. <br /><br />
-            To calibrate a voltage value, measure the CV out with a precision voltmeter, or connect it to a trusted oscillator and measure the pitches with a tuner. When you adjust a value, the CV is immediately updated so that it can be measured in real time. <br /><br />
-            You can directly control the CVs with 12 bit values by using NRPN 1 for CV1, and NRPN 2 for CV2. <br /><br />
-        </p>
+    <body style="font-family:'Open Sans'; font-size:12pt; font-weight:400; font-style:normal;">Each 12bit value (0-4095) is a scaling calibration value for the listed voltage. <br /><br />
+ To calibrate a voltage value, measure the CV out with a precision voltmeter, or connect it to a trusted oscillator and measure the pitches with a tuner. When you adjust a value, the CV is immediately updated so that it can be measured in real time. <br /><br />
+You can directly control the CVs with 12 bit values by using NRPN 1 for CV1, and NRPN 2 for CV2. <br /><br />
     </body>
     </html>
     )";
 
-    cvStyleFile = new QFile(":/inc/KMI_KMDM/cvCal/cvCalStyleMac.qss");
+    cvStyleFile = new QFile(":/stylesheets/cvCalStyleMac.qss");
 #endif
 
     ui->text_instructions->setHtml(textEditHTML);

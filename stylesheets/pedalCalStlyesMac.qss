@@ -1,0 +1,147 @@
+/**************LABEL**************/
+QLabel
+{
+        font: 12pt "Open Sans";
+        color: rgb(242, 242, 242);
+        background-color: transparent;
+}
+
+/*----------- QPushButton ------------*/
+QPushButton
+{
+        background: rgb(60, 60, 60);
+        color: rgb(245, 245, 245);
+        border: 2px solid rgb(245, 245, 245);
+        font: 10pt "Open Sans";
+        padding: 0, 1, 0, 0;
+}
+
+
+QPushButton:pressed
+{
+        background: rgb(245, 245, 245);
+        color: rgb(60, 60, 60);
+        border: 2px solid rgb(245, 245, 245);
+        font: 10pt "Open Sans";
+        padding: 0, 1, 0, 0;
+}
+
+/*----------- QComboBox ------------*/
+QComboBox
+{
+        font: 10pt "Open Sans";
+        border: 2px solid rgb(245, 245, 245);
+        background: rgb(60, 60, 60);
+        color: rgb(242, 242, 242);
+        padding: 1px 3px 1px 4px;
+ }
+
+QComboBox QListView
+{
+        background-color: rgb(60, 60, 60);
+        border: transparent;
+        font: 10pt "Open Sans";
+        padding-left: 0px;
+        padding-right: 3px;
+        min-width: 95px;
+}
+
+QComboBox QAbstractItemView
+{
+    min-width: 95px;
+   icon-size: 0px;
+}
+
+QComboBox::down-arrow
+{
+        border: none;
+        background: none;
+        image: url(:/ui/images/combobox_menu_arrows.svg);
+        padding-right: 15px;
+}
+
+QComboBox::item:alternate
+{
+        background: rgb(90, 90, 90);
+}
+
+QComboBox::item:selected
+{
+        border: 1px solid transparent;
+        background: rgb(0,174,239);
+}
+
+QComboBox::indicator
+{
+        background-color: transparent;
+        selection-background-color: transparent;
+        color: transparent;
+        selection-color: white;
+}
+
+QComboBox::drop-down
+{
+        width: 1px;
+        height: 1px;
+        subcontrol-origin: margin;
+        subcontrol-position: right center;
+        border-left-width: 0px;
+        border-right-width: 0px;
+        border-top-width: 0px;
+        border-bottom-width: 0px;
+        padding: 1px 1px 1px 4px;
+}
+
+QComboBox::disabled
+{
+        font: 10pt "Open Sans";
+        border: 2px solid rgb(100, 100, 100);
+        background: rgba(20, 20, 20, 100);
+        color: rgb(100, 100, 100);
+        padding: 1px 3px 1px 4px;
+}
+
+QComboBox::focus
+{
+        border: 2px solid rgb(0, 174, 239);
+}
+
+/* -------------- TEXTEDIT -------------------*/
+QTextEdit {
+    background-color: rgba(0,0,0,255);
+    color: white;
+    font: 10pt "Open Sans";
+border: black;
+}
+
+/* -------------- Scroll Bar --------------- */
+
+QTextEdit QScrollBar:vertical {
+        background: black;
+/* margin sets up how far the handle can travel */
+        margin: 0px 0px 0px 0px;
+}
+
+/* Sets up the color and height of handle */
+QTextEdit QScrollBar::handle:vertical {
+        background: #444444;
+}
+
+/* This remvoes the bottom button by setting the height to 0px */
+QTextEdit QScrollBar::add-line:vertical {
+        height: 0px;
+        subcontrol-position: bottom;
+        subcontrol-origin: margin;
+}
+
+/* This remvoes the top button by setting the height to 0px */
+QTextEdit QScrollBar::sub-line:vertical {
+        height: 0px;
+        subcontrol-position: top;
+        subcontrol-origin: margin;
+}
+
+/* need this to get rid of crosshatching on scrollbar background */
+QTextEdit QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+        background: #222222;
+}
