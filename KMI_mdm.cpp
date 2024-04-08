@@ -117,8 +117,9 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     pollingStatus = false;
 
     // break up sysex, default is disabled
+    syxExTxChunkTimer.start(); // timer for chunk speedlimit
     sysExTxChunkSize = 256;
-    sysExTxChunkDelay = 1;
+    sysExTxChunkDelay = 4; // should slow down a 100k payload to about 1 second
 
     // init machine states
     firmwareUpdateState = FWUD_STATE_IDLE;
@@ -1031,6 +1032,8 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
+
+
     ioGate = false; // pause any midi output while sending SysEx
 
     if (port_out_open == false)
@@ -1492,6 +1495,12 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
     // send sysex in chunks
     if (packet.size() > sysExTxChunkSize)
     {
+        if (syxExTxChunkTimer.elapsed() < sysExTxChunkDelay)
+        {
+            return; // enforce speed limit
+        }
+        syxExTxChunkTimer.restart();
+
         QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
 
         DM_OUT << "Sending SysEx - current time: " << currentTime << " - 256/" << packet.size() << " bytes, current";

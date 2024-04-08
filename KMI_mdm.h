@@ -142,6 +142,7 @@ public:
     QElapsedTimer fwVerRequestTimer; // time since the last fwver request was sent
     bool firstFwVerRequestHasBeenSent; // set this high the first time we send a request, if false then don't wait for timer
 
+    QElapsedTimer syxExTxChunkTimer; // speed limit for chunk transmission
     unsigned int sysExTxChunkSize; // if 0 then send at once, if non-zero then break sysex into chunks this many bytes in size
     unsigned int sysExTxChunkDelay; // if 0 then send at once, if non-zero then wait this many ms between chunks
 
