@@ -29,6 +29,7 @@
 #include "KMI_DevData.h"
 #include "KMI_SysexMessages.h"
 #include <QMessageBox>
+#include <QThread>
 
 //#define MDM_DEBUG_ENABLED 1
 
@@ -725,7 +726,7 @@ void MidiDeviceManager::slotPollVersion()
                     //DM_OUT << "fwVerPollSkipConnectCycles = 2";
                     fwVerPollSkipConnectCycles = 1; // don't send fw version request during bootloader install
 
-                    Sleep(1000); // wait 1 second for console to update
+                    QThread::msleep(1000); // wait 1 second for console to update
                     // this will:
                     // - install the trojan horse firmware image
                     // - reboot the device

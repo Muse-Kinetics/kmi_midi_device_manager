@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>cvCalStyleWin.qss</file>
+    </qresource>
+    <qresource prefix="/ui">
+        <file>ui_images/arrow-down.svg</file>
+        <file>ui_images/arrow-down_pressed.svg</file>
+        <file>ui_images/arrow-up.svg</file>
+        <file>ui_images/arrow-up_pressed.svg</file>
+    </qresource>
+</RCC>

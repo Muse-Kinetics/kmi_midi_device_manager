@@ -50,7 +50,7 @@ unsigned char _fw_ver_quneo[] =
 
 unsigned char _fw_ver_12step[] =
 {
-    1, 0, 2
+    1, 0, 3
 };
 
 unsigned char _fw_ver_softstep[] =

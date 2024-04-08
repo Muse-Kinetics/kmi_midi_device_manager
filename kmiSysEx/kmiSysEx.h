@@ -7,9 +7,22 @@
 #include <QByteArray>
 #include <KMI_mdm.h>
 #include <midi.h>
-#include <12step.h>
 
 // constants
+
+//---- OS DEFINES
+#ifndef Q_OS_MAC
+#include <windows.h>
+#define	PACK_INLINE
+#define	stricmp	_stricmp
+#define CASE_CMP(v1,v2) stricmp(v1,v2)
+#define	snprintf	sprintf_s
+//#define vsnprintf	vsprintf_s
+#pragma pack(1)
+#else
+#define	PACK_INLINE __attribute__ ((packed))
+#define CASE_CMP(v1,v2) strcasecmp(v1,v2)
+#endif
 
 #define SX_PREAMBLE_SIZE 4
 #define SX_PREAMBLE_SIZE_CRC 6
