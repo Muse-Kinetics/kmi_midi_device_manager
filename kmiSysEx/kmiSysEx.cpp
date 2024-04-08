@@ -90,7 +90,7 @@ void KMI_Decode::slotDecodePacket(QByteArray sysExBA)
             }
             else if (payload.index < payload.length)
             {
-                qDebug() << "payload[" << payload.index << "/" << payload.length << "]: " << val << " core_sx_count: " << core_sx_count << " crc: " << crc;
+                //qDebug() << "payload[" << payload.index << "/" << payload.length << "]: " << val << " core_sx_count: " << core_sx_count << " crc: " << crc;
                 payload.data[payload.index++] = val; // store data
                 core_sx_count++; // keep incrementing this
             }
@@ -98,13 +98,13 @@ void KMI_Decode::slotDecodePacket(QByteArray sysExBA)
             {
                 payload.crc.MSB = val;
                 payload.crc.index++;
-                qDebug() << "payload.crc.MSB: " << payload.crc.MSB << " crc: " << crc;
+                //qDebug() << "payload.crc.MSB: " << payload.crc.MSB << " crc: " << crc;
             }
             else if (payload.crc.index == 1)
             {
                 payload.crc.LSB = val;
                 payload.crc.index++;
-                qDebug() << "payload.crc.LSB: " << payload.crc.LSB << " crc: " << crc;
+                //qDebug() << "payload.crc.LSB: " << payload.crc.LSB << " crc: " << crc;
             }
             else
             {
@@ -137,7 +137,7 @@ void KMI_Decode::slotDecodePacket(QByteArray sysExBA)
                     qDebug("ERROR: preambleCRC fail!\n");
                     return;
                 }
-                qDebug("preambleCRC pass!\n");
+                //qDebug("preambleCRC pass!\n");
                 crc_init();
 
             }
@@ -150,10 +150,10 @@ void KMI_Decode::slotDecodePacket(QByteArray sysExBA)
                     payload.crc.index++;
                     //payload.crc.LSB = val;
                     payload.crc.whole = get16bit(payload.crc.MSB, payload.crc.LSB);
-                    qDebug() << "crc.index: " << payload.crc.index << " payload.CRC: " << payload.crc.whole << " payload.crc.MSB: " << payload.crc.MSB << " payload.crc.LSB: " << payload.crc.LSB << " crc: " << crc << "\n";
+                    //qDebug() << "crc.index: " << payload.crc.index << " payload.CRC: " << payload.crc.whole << " payload.crc.MSB: " << payload.crc.MSB << " payload.crc.LSB: " << payload.crc.LSB << " crc: " << crc << "\n";
                     if (payload.crc.whole == crc)
                     {
-                        qDebug("Payload CRC pass, emitting message signal!\n");
+                        //qDebug("Payload CRC pass, emitting message signal!\n");
                         sx_decode_init(); // stop decoding
                         emit signalRxKMIPacket(msgPID, preamble.packet.category, preamble.packet.type, &payload.data[0], payload.length);
                         return;
