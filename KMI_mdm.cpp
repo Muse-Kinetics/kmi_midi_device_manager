@@ -113,17 +113,17 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     ignoreFwVersionCheck = sessionSettings->value("IGNORE_FW_CHECKS", false).toBool();
 
     fwSaveRestoreGlobals = false;
-
-//    globalsRequested = false;
     bootloaderMode = false;
-//    fwUpdateRequested = false;
-//    hackStopTimer = false;
     pollingStatus = false;
-//    failFlag = false;
 
-    // let's replace all of these flags with a single state variable
+    // break up sysex, default is disabled
+    sysExTxChunkSize = 256;
+    sysExTxChunkDelay = 1;
+
+    // init machine states
     firmwareUpdateState = FWUD_STATE_IDLE;
     installingBootloader = BL_INSTALL_FALSE;
+
     firmwareUpdateStateTimer.start(); // a timer to track elapsed ms since last state change
     fwVerPollSkipConnectCycles = 0;
     firstFwVerRequestHasBeenSent = false;
@@ -448,6 +448,7 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 {
     DM_OUT << "slotCloseMidiOut called, send disconnect signal: " << signal;
 
+    slotEmptyMIDIBuffer(); // check this and empty if needed
 
     port_out_open = false;
     midiSendTimer.stop();
@@ -1038,29 +1039,37 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
         return; // handler doesn't exist
     }
 
-    try
+    // test if sysex start/stop are missing, and if so then add them
+    if (message[0] != MIDI_SX_START)
     {
-        // test if sysex start/stop are missing, and if so then add them
-        if (message[0] != MIDI_SX_START)
-        {
-            message.insert(message.begin(), MIDI_SX_START);
-            len++;
-        }
-        if (message[len - 1] != MIDI_SX_STOP) // len is not zero indexed
-        {
-            message.push_back(MIDI_SX_STOP);
-            len++;
-        }
-
-        midi_out->sendMessage( &message );
+        message.insert(message.begin(), MIDI_SX_START);
+        len++;
     }
-    catch (RtMidiError &error)
+    if (message[len - 1] != MIDI_SX_STOP) // len is not zero indexed
     {
-        DM_OUT << "SYSEX SEND ERR:" << (QString::fromStdString(error.getMessage()));
-        //emit signalFwConsoleMessage("SYSEX SEND ERR:" + (QString::fromStdString(error.getMessage())));
-        slotCloseMidiIn(SIGNAL_SEND);
-        slotCloseMidiOut(SIGNAL_SEND);
-        kmiPorts->slotRefreshPortMaps(); // kick it
+        message.push_back(MIDI_SX_STOP);
+        len++;
+    }
+
+    if (sysExTxChunkSize == 0)
+    {
+        // standard method, send the payload all at once
+        try
+        {
+            midi_out->sendMessage( &message );
+        }
+        catch (RtMidiError &error)
+        {
+            DM_OUT << "SYSEX SEND ERR:" << (QString::fromStdString(error.getMessage()));
+            slotCloseMidiIn(SIGNAL_SEND);
+            slotCloseMidiOut(SIGNAL_SEND);
+            kmiPorts->slotRefreshPortMaps(); // kick it
+        }
+    }
+    else
+    {
+        packet.insert(packet.end(), message.begin(), message.end()); // append the sysex message to the end of our packet
+
     }
 
     ioGate = true; // reopen gate
@@ -1473,6 +1482,42 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
         return;
     }
 
+    if (packet.size() > MAX_MIDI_SYSEX_SIZE)
+    {
+        DM_OUT << "ERROR: SYSEX TX BUFFER OVERFLOW, DISCARDING";
+        packet.clear();
+        return;
+    }
+
+    // send sysex in chunks
+    if (packet.size() > sysExTxChunkSize)
+    {
+        QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+
+        DM_OUT << "Sending SysEx - current time: " << currentTime << " - 256/" << packet.size() << " bytes, current";
+        // Create a sub-vector for the chunk to send
+        std::vector<uint8_t> chunkToSend(packet.begin(), packet.begin() + sysExTxChunkSize);
+
+        // Send the chunk
+        try
+        {
+            midi_out->sendMessage(&chunkToSend);
+        }
+        catch (RtMidiError &error)
+        {
+            QString errorString = QString("MIDI SEND SYSEX ERR: %1 \n Size: %2").arg(QString::fromStdString(error.getMessage()), QString::number(packet.size()));
+            DM_OUT << errorString;
+            slotCloseMidiIn(SIGNAL_SEND);
+            slotCloseMidiOut(SIGNAL_SEND);
+            kmiPorts->slotRefreshPortMaps(); // kick it
+            packet.clear();
+            return;
+        }
+
+        // Remove the sent chunk from the packet
+        packet.erase(packet.begin(), packet.begin() + sysExTxChunkSize);
+        return;
+    }
     for (size_t i = 0; i < packet.size(); ++i)
     {
         // Check if the current byte is a status byte

@@ -55,6 +55,8 @@ signals:
 
 public slots:
 
+    void slotPressButtDone();
+    void slotPressButtOk();
     void slotRequestFwUpdate();
     void slotAppendTextToConsole(QString thisText);
     void slotUpdateProgressBar(int thisPercent);
