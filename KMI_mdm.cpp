@@ -1642,7 +1642,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 
     // Clear the packet after processing all messages
     packet.clear();
-    qDebug() << "Clear Packet2";
+    //qDebug() << "Clear Packet2";
 }
 
 void MidiDeviceManager::slotInitNRPN()
