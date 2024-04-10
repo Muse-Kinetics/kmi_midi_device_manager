@@ -119,8 +119,8 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 
     // break up sysex, default is disabled
     syxExTxChunkTimer.start(); // timer for chunk speedlimit
-    sysExTxChunkSize = 256;
-    sysExTxChunkDelay = 4; // should slow down a 100k payload to a few seconds
+    sysExTxChunkSize = 48;
+    sysExTxChunkDelay = 1; // should slow down a 100k payload to a few seconds
 
     // init machine states
     firmwareUpdateState = FWUD_STATE_IDLE;
