@@ -119,8 +119,8 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 
     // break up sysex, default is disabled
     syxExTxChunkTimer.start(); // timer for chunk speedlimit
-    sysExTxChunkSize = 48;
-    sysExTxChunkDelay = 1; // should slow down a 100k payload to a few seconds
+    sysExTxChunkSize = 48; // one usbmidi packet
+    sysExTxChunkDelay = 1; // should slow down a 100k payload to ten seconds
 
     // init machine states
     firmwareUpdateState = FWUD_STATE_IDLE;
@@ -782,6 +782,8 @@ void MidiDeviceManager::slotPollVersion()
 
         if (remainingSeconds == 20 ||remainingSeconds == 10)
         {
+            slotCloseMidiIn(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+            slotCloseMidiOut(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
             kmiPorts->slotRefreshPortMaps(); // kick it
         }
         if (remainingSeconds == 22 || remainingSeconds == 12 || remainingSeconds == 5)
@@ -1040,6 +1042,9 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     if (port_out_open == false)
     {
         DM_OUT << "ERROR: midi_out is not open, aborting slotSendMIDI!";
+        slotCloseMidiIn(SIGNAL_SEND); // close the port if we failed
+        slotCloseMidiOut(SIGNAL_SEND); // close the port if we failed
+        kmiPorts->slotRefreshPortMaps(); // kick it
         return; // handler doesn't exist
     }
 
@@ -1468,6 +1473,9 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     if (port_out_open == false)
     {
         DM_OUT << "ERROR: midi_out is not open, aborting slotSendMIDI! - Status: " << status;
+        slotCloseMidiIn(SIGNAL_SEND); // close the port if we failed
+        slotCloseMidiOut(SIGNAL_SEND); // close the port if we failed
+        kmiPorts->slotRefreshPortMaps(); // kick it
         return; // handler doesn't exist
     }
 
