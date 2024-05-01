@@ -1036,7 +1036,7 @@ void MidiDeviceManager::slotSendSysExBA(QByteArray thisSysexArray)
 // takes a pointer and the size of the array
 void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 {
-    DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
+    //DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
 
@@ -1079,7 +1079,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     else
     {
         QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
-        DM_OUT << "Sending SysEx - current time: " << currentTime << " Packet Size: " << sysExTxChunkSize;
+        //DM_OUT << "Sending SysEx - current time: " << currentTime << " Packet Size: " << sysExTxChunkSize;
         packet.insert(packet.end(), message.begin(), message.end()); // append the sysex message to the end of our packet
 
     }
@@ -1470,7 +1470,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     } // end switch (status)
 
 //#ifdef MDM_DEBUG_ENABLED
-    if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;
+    //if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;
 //#endif
 
     if (port_out_open == false)
@@ -1489,7 +1489,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 {
     std::vector<uchar> message;
     static bool sendLastChunk = false;
-    static int syxPacketsSent = 0;
+    //static int syxPacketsSent = 0;
 
     if (packet.size() == 0)
     {
@@ -1516,7 +1516,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 
         QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
 
-        DM_OUT << "Sending SysEx - current time: " << currentTime << " - " << sizeToSend << "/" << packet.size() << " bytes, current";
+        //DM_OUT << "Sending SysEx - current time: " << currentTime << " - " << sizeToSend << "/" << packet.size() << " bytes, current";
         // Create a sub-vector for the chunk to send
         std::vector<uint8_t> chunkToSend(packet.begin(), packet.begin() + sizeToSend);
 
@@ -1535,7 +1535,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
         try
         {  
             midi_out->sendMessage(&chunkToSend);
-            DM_OUT << "Sent packet: " << ++syxPacketsSent;
+            //DM_OUT << "Sent packet: " << ++syxPacketsSent;
         }
         catch (RtMidiError &error)
         {
