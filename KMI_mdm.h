@@ -8,7 +8,7 @@
 
   A cross-platform C++/Qt MIDI library for KMI devices.
   Written by Eric Bateman, August 2021.
-  (c) Copyright 2021 Keith McMillen Instruments, all rights reserved.
+  (c) Copyright 2024 KMI Music, Inc., all rights reserved.
 
   See KMI_mdm.cpp for more details.
 

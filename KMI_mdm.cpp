@@ -5,7 +5,7 @@
 
   A cross-platform C++/Qt MIDI library for KMI devices.
   Written by Eric Bateman, August 2021.
-  (c) Copyright 2021 Keith McMillen Instruments, all rights reserved.
+  (c) Copyright 2024 KMI Music, Inc., all rights reserved.
 
   Features:
   - Handles connectivity to KMI MIDI devices
@@ -1032,6 +1032,9 @@ void MidiDeviceManager::slotSendSysExBA(QByteArray thisSysexArray)
 // takes a pointer and the size of the array
 void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 {
+    if (port_out_open == false)
+        return;
+
     DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
