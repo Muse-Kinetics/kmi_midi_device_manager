@@ -57,7 +57,9 @@
     #define QUNEXUS_OLD_OUT_P1 "QuNexus Port 1"
     #define QUNEXUS_OLD_OUT_P2 "QuNexus Port 2"
     #define QUNEXUS_OLD_OUT_P3 "QuNexus Port 3"
-#else
+#endif
+
+#ifdef Q_OS_WIN
     #define QUNEXUS_BL_PORT "QuNexus Control Surface"
     #define QUNEXUS_OLD_IN_P1 "QuNexus"
     #define QUNEXUS_OLD_IN_P2 "MIDIIN2 (QuNexus)"
@@ -65,6 +67,16 @@
     #define QUNEXUS_OLD_OUT_P1 "QuNexus"
     #define QUNEXUS_OLD_OUT_P2 "MIDIOUT2 (QuNexus)"
     #define QUNEXUS_OLD_OUT_P3 "MIDIOUT3 (QuNexus)"
+#endif
+
+#ifdef Q_OS_LINUX
+    #define QUNEXUS_BL_PORT "QuNexus MIDI 1"
+    #define QUNEXUS_OLD_IN_P1 "QuNexus MIDI 1"
+    #define QUNEXUS_OLD_IN_P2 "QuNexus MIDI 2"
+    #define QUNEXUS_OLD_IN_P3 "QuNexus MIDI 3"
+    #define QUNEXUS_OLD_OUT_P1 "QuNexus MIDI 1"
+    #define QUNEXUS_OLD_OUT_P2 "QuNexus MIDI 2"
+    #define QUNEXUS_OLD_OUT_P3 "QuNexus MIDI 3"
 #endif
 
 // QUNEXUS NEW

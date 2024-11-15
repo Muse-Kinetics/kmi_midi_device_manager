@@ -119,8 +119,14 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
 
     // break up sysex, default is disabled
     syxExTxChunkTimer.start(); // timer for chunk speedlimit
+
+#ifdef Q_OS_LINUX
+    sysExTxChunkSize = 512; //
+    sysExTxChunkDelay = 50; //
+#else
     sysExTxChunkSize = 48; // one usbmidi packet
     sysExTxChunkDelay = 1; // should slow down a 100k payload to ten seconds
+#endif
 
     // init machine states
     firmwareUpdateState = FWUD_STATE_IDLE;
@@ -862,6 +868,12 @@ void MidiDeviceManager::slotPollVersion()
         firmwareUpdateStateTimer.restart();
         break;
     case FWUD_STATE_FW_SENT_WAIT:
+        if (packet.size() > 500)
+        {
+            emit signalFwConsoleMessage(QString("FW bytes remaining: %1\n").arg(packet.size()));
+            firmwareUpdateStateTimer.restart();
+            break;
+        }
         DM_OUT << "Firmware Image sent, waiting for device to reboot..." << firmwareUpdateStateTimer.elapsed();
 
         if (remainingSeconds == 20 ||remainingSeconds == 10)
