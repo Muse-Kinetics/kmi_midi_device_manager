@@ -85,6 +85,16 @@ fwUpdate::~fwUpdate()
     delete ui;
 }
 
+void fwUpdate::slotPressButtOk()
+{
+    ui->butt_ok->click();
+}
+
+void fwUpdate::slotPressButtDone()
+{
+    ui->butt_done->click();
+}
+
 void fwUpdate::slotRequestFwUpdate()
 {
     ui->interrupt_warning->show();
@@ -135,13 +145,11 @@ void fwUpdate::slotFwUpdateComplete(bool success)
 
         ui->interrupt_warning->hide();
 
-        //ui->butt_retry->hide();
-
         ui->butt_done->setText("Done"); // change text but for now keep as a "successful" exit, which should re-send connection checks
-        //ui->butt_done->setGeometry(FW_WIN_X_CENTER - FW_BUTT_X_CENTER, FW_BUTT_ROW1, FW_BUTT_WIDTH, FW_BUTT_HEIGHT); // move "done" button to the left
         ui->butt_done->show();
-
         emit signalFwUpdateSuccess();
+
+
     }
     else
     {

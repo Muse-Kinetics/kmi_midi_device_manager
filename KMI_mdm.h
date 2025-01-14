@@ -8,7 +8,7 @@
 
   A cross-platform C++/Qt MIDI library for KMI devices.
   Written by Eric Bateman, August 2021.
-  (c) Copyright 2021 Keith McMillen Instruments, all rights reserved.
+  (c) Copyright 2024 KMI Music, Inc., all rights reserved.
 
   See KMI_mdm.cpp for more details.
 
@@ -100,7 +100,6 @@ public:
     QString portName_in, portName_out; // the port names of the in/out ports
 
     bool restart;               // flag to halt all actions and restart the app
-//    bool failFlag;              // used to abort processes like slotResetConnections
 
     // RtMidi devices
     RtMidiIn *midi_in;
@@ -133,23 +132,27 @@ public:
 
     //Describes whether or not a fw update has been requested-- useful for managing bootloader reconnects
     bool fwSaveRestoreGlobals; // set this flag to backup and restore globals before/after a firmware update
-//    bool globalsRequested; // flag if we are storing global data to restore after update
     bool bootloaderMode;
     bool pollingStatus;
 
-    int firmwareUpdateState;
-    int installingBootloader;
+    int firmwareUpdateState;    // state of fw update process
+    int installingBootloader;   // state of bootloader install process
     QElapsedTimer firmwareUpdateStateTimer;
     int fwVerPollSkipConnectCycles; // set this count to not send fwver request for x connect cycles
     QElapsedTimer fwVerRequestTimer; // time since the last fwver request was sent
     bool firstFwVerRequestHasBeenSent; // set this high the first time we send a request, if false then don't wait for timer
+
+    QElapsedTimer syxExTxChunkTimer; // speed limit for chunk transmission
+    unsigned int sysExTxChunkSize; // if 0 then send at once, if non-zero then break sysex into chunks this many bytes in size
+    unsigned int sysExTxChunkDelay; // if 0 then send at once, if non-zero then wait this many ms between chunks
 
     QTimer* versionPoller;
 
     // stops MIDI if sysex is sending
     bool ioGate;
 
-#define MAX_MIDI_PACKET_SIZE 64
+#define MAX_MIDI_SYSEX_SIZE 150000 // this is the check when sending sysex
+#define MAX_MIDI_PACKET_SIZE 64 // this is the check when building channel/common messages
     std::vector<uchar> packet; // packet to stuff outgoing midi packets into (not sysex)
     QTimer midiSendTimer;
 

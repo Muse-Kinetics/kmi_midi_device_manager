@@ -23,7 +23,7 @@ unsigned char _bl_ver_qunexus[] =
 };
 unsigned char _fw_ver_qunexus[] =
 {
-    2, 1, 1
+    2, 2, 0
 };
 
 unsigned char _fw_ver_kboard[] =
@@ -50,12 +50,12 @@ unsigned char _fw_ver_quneo[] =
 
 unsigned char _fw_ver_12step[] =
 {
-    1, 0, 2
+    1, 0, 4
 };
 
 unsigned char _fw_ver_softstep[] =
 {
-    2, 0, 0
+    2, 0, 2
 };
 
 unsigned char _bl_ver_softstep[] =

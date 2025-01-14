@@ -14,8 +14,18 @@
    <string>Dialog</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">	color:white;
-	background:#333333;
+   <string notr="true">QDialog
+{
+	background-color:rgba(50,50,50,100);
+}
+
+QStackedWidget
+{
+	background-color:rgba(50,50,50,100);
+}
+
+
+
 </string>
   </property>
   <widget class="QStackedWidget" name="stack">
@@ -28,10 +38,7 @@
     </rect>
    </property>
    <property name="styleSheet">
-    <string notr="true">QDialog
-{
-	background-color:black;
-}</string>
+    <string notr="true"/>
    </property>
    <property name="currentIndex">
     <number>0</number>
@@ -128,6 +135,26 @@ p, li { white-space: pre-wrap; }
       <string>Ok</string>
      </property>
     </widget>
+    <widget class="QLabel" name="bg1">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>500</width>
+       <height>350</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color:rgba(50,50,50,255);</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <zorder>bg1</zorder>
+    <zorder>textBrowser</zorder>
+    <zorder>butt_cancel</zorder>
+    <zorder>butt_ok</zorder>
    </widget>
    <widget class="QWidget" name="page_progress">
     <widget class="QTextEdit" name="console">
@@ -252,6 +279,27 @@ p, li { white-space: pre-wrap; }
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
+    <widget class="QLabel" name="bg2">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>500</width>
+       <height>350</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color:rgba(50,50,50,255);</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <zorder>bg2</zorder>
+    <zorder>console</zorder>
+    <zorder>progressBar</zorder>
+    <zorder>butt_done</zorder>
+    <zorder>interrupt_warning</zorder>
    </widget>
   </widget>
  </widget>
