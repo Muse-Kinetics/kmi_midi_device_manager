@@ -1630,7 +1630,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
                             kmiPorts->slotRefreshPortMaps(); // kick it
                             //emit signalFwConsoleMessage(errorString);
                         }
-                        qDebug() << "Clear Packet1";
+                        //qDebug() << "Clear Packet1";
                         message.clear(); // Clear the message vector for the next message
                     }
                 }
