@@ -1078,11 +1078,14 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     }
     else
     {
-        QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+        //QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
         //DM_OUT << "Sending SysEx - current time: " << currentTime << " Packet Size: " << sysExTxChunkSize;
         packet.insert(packet.end(), message.begin(), message.end()); // append the sysex message to the end of our packet
 
     }
+
+    if (packet.size() < sysExTxChunkSize)
+        slotEmptyMIDIBuffer();
 
     ioGate = true; // reopen gate
 
@@ -1514,7 +1517,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 
         unsigned int sizeToSend = sendLastChunk ? (unsigned int)packet.size() : sysExTxChunkSize;
 
-        QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+        //QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
 
         //DM_OUT << "Sending SysEx - current time: " << currentTime << " - " << sizeToSend << "/" << packet.size() << " bytes, current";
         // Create a sub-vector for the chunk to send
