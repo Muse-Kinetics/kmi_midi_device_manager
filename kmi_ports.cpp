@@ -15,7 +15,7 @@
 
 */
 
-#include "kmi_ports.h"
+#include "KMI_ports.h"
 #include "KMI_DevData.h"
 
 #define qsFromStd QString::fromStdString

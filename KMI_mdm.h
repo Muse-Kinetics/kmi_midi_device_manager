@@ -22,7 +22,7 @@
 #include <QElapsedTimer>
 
 #include "RtMidi.h"
-#include "kmi_ports.h"
+#include "KMI_ports.h"
 #include "midi.h"
 
 typedef enum

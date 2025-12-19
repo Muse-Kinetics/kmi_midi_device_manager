@@ -6,6 +6,8 @@
 
 // ************************************************
 // SysEx Messages
+// Messages stored here are largely from legacy methods before we standardized with
+// cpp libraries.
 
 
 // Universal Device ID and Firmware Request
