@@ -477,7 +477,7 @@ void cvCal::slotSendCalibrationData()
 
     slotUpdateCVcalData();
 
-    uint8_t txPayload[cvCalData.arraySize];
+    uint8_t txPayload[CV_CALDATA_ARRAYSIZE];
     int payloadIndex = 0;
 
     txPayload[payloadIndex++] = cvCalData.data.version;

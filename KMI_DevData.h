@@ -165,6 +165,8 @@
     #define SS_IN_P2 "SoftStep Expander"
     #define SS_OUT_P1 "SoftStep Control Surface"
     #define SS_OUT_P2 "SoftStep Expander"
+    #define SS3_OUT_P2 "SoftStep TRS MIDI Out"
+    #define SS3_OUT_P3 "SoftStep CV Out"
 
     #define SS_SHARE_PORT "SoftStep Share"
 

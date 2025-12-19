@@ -645,6 +645,10 @@ void MidiDeviceManager::slotPollVersion()
 
     int remainingSeconds = round((FW_UPDATE_TIMEOUT_INTERVAL - firmwareUpdateStateTimer.elapsed()) / 1000);
 
+    if (packet.size() > 0)
+        firmwareUpdateStateTimer.restart();
+
+
     if (    firmwareUpdateState > FWUD_STATE_BEGIN &&
             firmwareUpdateStateTimer.elapsed() > (FW_UPDATE_TIMEOUT_INTERVAL - 10000) &&
             installingBootloader != BL_INSTALL_COMPLETE
@@ -782,9 +786,7 @@ void MidiDeviceManager::slotPollVersion()
 
         if (remainingSeconds == 20 ||remainingSeconds == 10)
         {
-            slotCloseMidiIn(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
-            slotCloseMidiOut(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
-            kmiPorts->slotRefreshPortMaps(); // kick it
+            //kmiPorts->slotRefreshPortMaps(); // kick it
         }
         if (remainingSeconds == 22 || remainingSeconds == 12 || remainingSeconds == 5)
         {
@@ -867,13 +869,12 @@ void MidiDeviceManager::slotPollVersion()
         if (remainingSeconds == 20 ||remainingSeconds == 10)
         {
             // EB TODO - are these lines necessary? Didn't need for 12 Step, does it break other devices? Windows?
-            slotCloseMidiIn(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
-            slotCloseMidiOut(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
-            kmiPorts->slotRefreshPortMaps(); // kick it
+//            slotCloseMidiIn(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+//            slotCloseMidiOut(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
+//            kmiPorts->slotRefreshPortMaps(); // kick it
         }
         if (remainingSeconds == 22 || remainingSeconds == 12 || remainingSeconds == 5)
         {
-            // EB TODO - are these lines necessary? Didn't need for 12 Step, does it break other devices? Windows?
             //DM_OUT << "Sending SysEx ID version request (again)";
             slotSendSysEx(_sx_id_req_standard, sizeof(_sx_id_req_standard));
         }
@@ -896,9 +897,12 @@ void MidiDeviceManager::slotPollVersion()
         emit signalFirmwareUpdateComplete(true);
 
         thisVersion = QString("%1.%2.%3").arg((uchar)deviceFirmwareVersion[0]).arg((uchar)deviceFirmwareVersion[1]).arg((uchar)deviceFirmwareVersion[2]);
-        emit signalFwConsoleMessage("\nFirmware successfully updated to " + thisVersion + "\n");
+
 #ifdef Q_OS_WINDOWS
+        emit signalFwConsoleMessage("\nFirmware update complete.\n");
         emit signalFwConsoleMessage("\nThe application will re-launch, please disconnect your device now and wait to reconnect until after the application has loaded. ");
+#else
+        emit signalFwConsoleMessage("\nFirmware successfully updated to " + thisVersion + "\n");
 #endif
 
         firmwareUpdateState = FWUD_STATE_IDLE;
@@ -1032,10 +1036,7 @@ void MidiDeviceManager::slotSendSysExBA(QByteArray thisSysexArray)
 // takes a pointer and the size of the array
 void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 {
-    if (port_out_open == false)
-        return;
-
-    DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
+    //DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
 
@@ -1045,9 +1046,6 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     if (port_out_open == false)
     {
         DM_OUT << "ERROR: midi_out is not open, aborting slotSendMIDI!";
-        slotCloseMidiIn(SIGNAL_SEND); // close the port if we failed
-        slotCloseMidiOut(SIGNAL_SEND); // close the port if we failed
-        kmiPorts->slotRefreshPortMaps(); // kick it
         return; // handler doesn't exist
     }
 
@@ -1080,9 +1078,14 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     }
     else
     {
+        //QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+        //DM_OUT << "Sending SysEx - current time: " << currentTime << " Packet Size: " << sysExTxChunkSize;
         packet.insert(packet.end(), message.begin(), message.end()); // append the sysex message to the end of our packet
 
     }
+
+    if (packet.size() < sysExTxChunkSize)
+        slotEmptyMIDIBuffer();
 
     ioGate = true; // reopen gate
 
@@ -1470,15 +1473,12 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
     } // end switch (status)
 
 //#ifdef MDM_DEBUG_ENABLED
-    if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;
+    //if (status != 254) DM_OUT << "Send MIDI - packet: " << packet;
 //#endif
 
     if (port_out_open == false)
     {
         DM_OUT << "ERROR: midi_out is not open, aborting slotSendMIDI! - Status: " << status;
-        slotCloseMidiIn(SIGNAL_SEND); // close the port if we failed
-        slotCloseMidiOut(SIGNAL_SEND); // close the port if we failed
-        kmiPorts->slotRefreshPortMaps(); // kick it
         return; // handler doesn't exist
     }
 
@@ -1492,6 +1492,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 {
     std::vector<uchar> message;
     static bool sendLastChunk = false;
+    //static int syxPacketsSent = 0;
 
     if (packet.size() == 0)
     {
@@ -1516,16 +1517,28 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 
         unsigned int sizeToSend = sendLastChunk ? (unsigned int)packet.size() : sysExTxChunkSize;
 
-        QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+        //QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
 
-        DM_OUT << "Sending SysEx - current time: " << currentTime << " - " << sizeToSend << "/" << packet.size() << " bytes, current";
+        //DM_OUT << "Sending SysEx - current time: " << currentTime << " - " << sizeToSend << "/" << packet.size() << " bytes, current";
         // Create a sub-vector for the chunk to send
         std::vector<uint8_t> chunkToSend(packet.begin(), packet.begin() + sizeToSend);
 
+        // Check if the vector size is less than 6
+        if (chunkToSend.size() < 6)
+        {
+            // Check if the last byte is 247
+            if (!chunkToSend.empty() && chunkToSend.back() == MIDI_SX_STOP)
+            {
+                // Insert 10 zeros before the last byte
+                chunkToSend.insert(chunkToSend.end() - 1, 10, 0);
+            }
+        }
+
         // Send the chunk
         try
-        {
+        {  
             midi_out->sendMessage(&chunkToSend);
+            //DM_OUT << "Sent packet: " << ++syxPacketsSent;
         }
         catch (RtMidiError &error)
         {
@@ -1538,16 +1551,15 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
             return;
         }
 
+        // Remove the sent chunk from the packet
+        packet.erase(packet.begin(), packet.begin() + sizeToSend);
+
         if (sendLastChunk) // if we just sent the last chunk, clear flag/buffer and exit
         {
             sendLastChunk = false;
             packet.clear();
             return;
         }
-
-        // Remove the sent chunk from the packet
-        packet.erase(packet.begin(), packet.begin() + sizeToSend);
-
 
         if (packet.size() < sysExTxChunkSize) // if we have one chunk left, loop around and send it
         {
@@ -1621,7 +1633,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
                             kmiPorts->slotRefreshPortMaps(); // kick it
                             //emit signalFwConsoleMessage(errorString);
                         }
-                        qDebug() << "Clear Packet1";
+                        //qDebug() << "Clear Packet1";
                         message.clear(); // Clear the message vector for the next message
                     }
                 }
