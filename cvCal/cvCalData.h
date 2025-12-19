@@ -24,6 +24,7 @@ typedef union {
 } BigEndianUint16;
 
 
+#define CV_CALDATA_ARRAYSIZE 270
 
 class CVCalData
 {
