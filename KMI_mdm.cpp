@@ -5,7 +5,7 @@
 
   A cross-platform C++/Qt MIDI library for KMI devices.
   Written by Eric Bateman, August 2021.
-  (c) Copyright 2021 Keith McMillen Instruments, all rights reserved.
+  (c) Copyright 2024 KMI Music, Inc., all rights reserved.
 
   Features:
   - Handles connectivity to KMI MIDI devices
@@ -1078,11 +1078,14 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     }
     else
     {
-        QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+        //QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
         //DM_OUT << "Sending SysEx - current time: " << currentTime << " Packet Size: " << sysExTxChunkSize;
         packet.insert(packet.end(), message.begin(), message.end()); // append the sysex message to the end of our packet
 
     }
+
+    if (packet.size() < sysExTxChunkSize)
+        slotEmptyMIDIBuffer();
 
     ioGate = true; // reopen gate
 
@@ -1514,7 +1517,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 
         unsigned int sizeToSend = sendLastChunk ? (unsigned int)packet.size() : sysExTxChunkSize;
 
-        QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+        //QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
 
         //DM_OUT << "Sending SysEx - current time: " << currentTime << " - " << sizeToSend << "/" << packet.size() << " bytes, current";
         // Create a sub-vector for the chunk to send
@@ -1630,7 +1633,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
                             kmiPorts->slotRefreshPortMaps(); // kick it
                             //emit signalFwConsoleMessage(errorString);
                         }
-                        qDebug() << "Clear Packet1";
+                        //qDebug() << "Clear Packet1";
                         message.clear(); // Clear the message vector for the next message
                     }
                 }
