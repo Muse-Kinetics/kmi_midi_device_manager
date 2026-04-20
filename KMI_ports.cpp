@@ -646,18 +646,18 @@ QString portNameFix(QString portName)
 
 #ifdef Q_OS_WIN
 
-    // Windows is not showing our hardcoded port names, either way it reports:
-    // K-Board Pro 4 0
-    // MIDIIN2 (K-Board Pro 4) 1
-
-    // remove extra digits
-    if (portName.right(2).toInt() > 9 )     // test for two digit port numbers
+    // WinMM can append trailing " <index>" to names (e.g. "MIDIIN2 (...) 1").
+    // UWP names generally do not use this suffix, so only trim when the suffix is numeric.
+    int lastSpace = portName.lastIndexOf(" ");
+    if (lastSpace > 0)
     {
-        portName = portName.left(portName.length() - 3);
-    }
-    else     // single digit
-    {
-        portName = portName.left(portName.length() - 2);
+        bool ok = false;
+        QString trailingIndex = portName.mid(lastSpace + 1);
+        trailingIndex.toInt(&ok);
+        if (ok)
+        {
+            portName = portName.left(lastSpace);
+        }
     }
 
     // K-Mix on Windows is a special case, it's driver is tied to the ASIO driver from thesycon.
@@ -746,6 +746,31 @@ QString portNameFix(QString portName)
         else if (portName == "SoftStep")
         {
             return SS_IN_P1;
+        }
+
+        // UWP and some Windows stacks already report canonical SoftStep names.
+        else if (portName.contains("SoftStep"))
+        {
+            if (portName.contains("Bootloader"))
+            {
+                return SS_BL_PORT;
+            }
+            if (portName.contains("Control Surface"))
+            {
+                return SS_IN_P1;
+            }
+            if (portName.contains("Expander"))
+            {
+                return SS_IN_P2;
+            }
+            if (portName.contains("TRS MIDI Out"))
+            {
+                return SS3_OUT_P2;
+            }
+            if (portName.contains("CV Out"))
+            {
+                return SS3_OUT_P3;
+            }
         }
 
     }

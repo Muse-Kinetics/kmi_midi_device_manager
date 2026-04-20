@@ -20,6 +20,7 @@
 #include <QApplication>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <atomic>
 
 #include "RtMidi.h"
 #include "KMI_ports.h"
@@ -149,12 +150,24 @@ public:
     QTimer* versionPoller;
 
     // stops MIDI if sysex is sending
-    bool ioGate;
+    std::atomic<bool> ioGate;
 
 #define MAX_MIDI_SYSEX_SIZE 150000 // this is the check when sending sysex
 #define MAX_MIDI_PACKET_SIZE 64 // this is the check when building channel/common messages
     std::vector<uchar> packet; // packet to stuff outgoing midi packets into (not sysex)
     QTimer midiSendTimer;
+
+    // Circuit breaker for MIDI send errors - prevents infinite reconnect loops
+    int midiSendErrorCount;
+    QElapsedTimer midiSendErrorTimer;
+    static const int MIDI_SEND_ERROR_MAX = 3;           // max errors before circuit breaker trips
+    static const int MIDI_SEND_ERROR_WINDOW_MS = 60000; // reset error count after this quiet period (60s)
+
+    // Retry state for send failures — retries before escalating to circuit breaker
+    int midiChunkRetryCount = 0;
+    QElapsedTimer midiChunkRetryTimer;
+    static const int MIDI_CHUNK_RETRY_MAX = 3;          // max retries for normal traffic
+    static const int MIDI_CHUNK_RETRY_MAX_FW = 10;      // max retries during firmware transfer
 
     QDialog* errDialog;
 
@@ -197,6 +210,9 @@ signals:
     void signalFwConsoleMessage(QString message);
     void signalFwProgress(int thisPercent);
     void signalFirmwareUpdateComplete(bool);
+
+    // transmit health — emitted on retry (retryCount>0) and on recovery (retryCount=0)
+    void signalTransmitHealth(int retryCount, int maxRetries);
 
     void signalRequestGlobals();
     void signalRestoreGlobals();
@@ -284,6 +300,7 @@ public slots:
 
 private:
     bool callbackIsSet;
+    void handleSendError(const QString &context);
 
 };
 
