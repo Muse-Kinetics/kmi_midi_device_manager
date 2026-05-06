@@ -17,8 +17,18 @@
 
 #include "KMI_ports.h"
 #include "KMI_DevData.h"
+#include <QSettings>
 
 #define qsFromStd QString::fromStdString
+
+namespace
+{
+int slotGetDetectedSoftStepHardwareRevision()
+{
+    QSettings sessionSettings;
+    return sessionSettings.value("LAST_SS_REV_CONNECTED", SS_3).toInt();
+}
+}
 
 int lastMIDIIN_QuNexus = 0; // for portNameFix on Windows
 int lastMIDIOUT_QuNexus = 0;
@@ -725,7 +735,13 @@ QString portNameFix(QString portName)
         // SoftStep
         else if (portName.indexOf("SSCOM") != -1 || portName.indexOf("SoftStep") != -1)
         {
-            return SS_OUT_P2; // Two ports means any port with "MIDIIN" is the expander port
+            const int softStepHardwareRevision = slotGetDetectedSoftStepHardwareRevision();
+            if (softStepHardwareRevision >= SS_3)
+            {
+                return (thisMidiDigit >= 3) ? SS3_OUT_P3 : SS3_OUT_P2;
+            }
+
+            return SS_OUT_P2; // Legacy SoftStep secondary output is the expander port
         }
     }
     else // first port

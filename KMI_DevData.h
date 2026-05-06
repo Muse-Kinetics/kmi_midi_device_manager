@@ -15,6 +15,8 @@
 #include "qglobal.h" // needed for OS defines
 #include "midi.h"
 
+enum {SS_UNDEFINED, SS_1, SS_2, SS_3};
+
 // USB and SysEx Product IDs
 
 #define PID_AUX             0

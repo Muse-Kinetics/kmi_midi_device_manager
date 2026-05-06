@@ -34,6 +34,7 @@
 #include <QFile>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QSysInfo>
 #include <QStringList>
 #include <stdexcept>
 
@@ -222,11 +223,13 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     midiChunkRetryTimer.start();
 
 #ifdef Q_OS_LINUX
-    sysExTxChunkSize = 512; //
-    sysExTxChunkDelay = 50; //
+    sysExTxChunkSize = 512;
+    sysExTxChunkSizeFW = 48;
+    sysExTxChunkDelay = 50;
 #else
-    sysExTxChunkSize = 48; // one usbmidi packet
-    sysExTxChunkDelay = 1; // should slow down a 100k payload to ten seconds
+    sysExTxChunkSize = 1000;
+    sysExTxChunkSizeFW = 48;
+    sysExTxChunkDelay = 1;
 #endif
 
     // init machine states
@@ -272,6 +275,49 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     {
         slotStartPolling(objectName);
     }
+}
+
+QString MidiDeviceManager::windowsVersionString()
+{
+#ifdef Q_OS_WIN
+    QString winProductName = QSysInfo::prettyProductName();
+    QString winDisplayVersion = "unknown";
+    QString winBuildNumber = "unknown";
+    QString winUBR;
+
+    QSettings winVersionReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", QSettings::NativeFormat);
+    QString regDisplayVersion = winVersionReg.value("DisplayVersion").toString();
+    QString regBuildNumber = winVersionReg.value("CurrentBuildNumber").toString();
+    QString regUBR = winVersionReg.value("UBR").toString();
+
+    if (!regDisplayVersion.isEmpty()) winDisplayVersion = regDisplayVersion;
+    if (!regBuildNumber.isEmpty()) winBuildNumber = regBuildNumber;
+    if (!regUBR.isEmpty()) winUBR = regUBR;
+
+    if (winDisplayVersion == "unknown")
+    {
+        bool ok = false;
+        int buildNum = winBuildNumber.toInt(&ok);
+        if (ok)
+        {
+            if (buildNum >= 26200) winDisplayVersion = "25H2";
+            else if (buildNum >= 26100) winDisplayVersion = "24H2";
+        }
+    }
+
+    QString winBuildString = winBuildNumber;
+    if (!winUBR.isEmpty() && winUBR != "0")
+    {
+        winBuildString += "." + winUBR;
+    }
+
+    return QString("Windows Version: %1 DisplayVersion: %2 Build: %3")
+        .arg(winProductName)
+        .arg(winDisplayVersion)
+        .arg(winBuildString);
+#else
+    return QString();
+#endif
 }
 
 void MidiDeviceManager::slotUpdatePID(int thisPID)
@@ -470,8 +516,7 @@ bool MidiDeviceManager::slotOpenMidiOut()
     portName_out = kmiPorts->getOutPortName(port_out);
     port_out_open = true;
     slotInitNRPN(); // zero out previous paramaters sent/received
-    // Don't reset midiSendErrorCount here - it must persist across reconnects
-    // so the circuit breaker can actually trip after repeated failures
+    midiSendErrorCount = 0; // fresh port = fresh start for circuit breaker
     midiChunkRetryCount = 0; // reset retry state on fresh port open
     midiSendTimer.start();
     DIAG(this, QString("OPEN OUT port=%1 name=%2 errorCount=%3 midi_out=%4")
@@ -1192,7 +1237,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
     DIAG(this, QString("slotSendSysEx len=%1 chunkSize=%2 packetBuf=%3 portOpen=%4 thread=%5")
-         .arg(len).arg(sysExTxChunkSize).arg(packet.size()).arg(port_out_open)
+         .arg(len).arg((firmwareUpdateState != FWUD_STATE_IDLE) ? sysExTxChunkSizeFW : sysExTxChunkSize).arg(packet.size()).arg(port_out_open)
          .arg((quint64)QThread::currentThreadId(), 0, 16));
 
     ioGate = false; // pause any midi output while sending SysEx
@@ -1241,8 +1286,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 
     }
 
-    if (packet.size() < sysExTxChunkSize)
-        slotEmptyMIDIBuffer();
+    slotEmptyMIDIBuffer();
 
     ioGate = true; // reopen gate
 
@@ -1720,8 +1764,11 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
         return;
     }
 
+    // use smaller chunk size during firmware updates
+    unsigned int activeChunkSize = (firmwareUpdateState != FWUD_STATE_IDLE) ? sysExTxChunkSizeFW : sysExTxChunkSize;
+
     // send sysex in chunks
-    if (packet.size() > sysExTxChunkSize || sendLastChunk == true)
+    if (packet.size() > activeChunkSize || sendLastChunk == true)
     {
         if (syxExTxChunkTimer.elapsed() < sysExTxChunkDelay)
         {
@@ -1729,7 +1776,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
         }
         syxExTxChunkTimer.restart();
 
-        unsigned int sizeToSend = sendLastChunk ? (unsigned int)packet.size() : sysExTxChunkSize;
+        unsigned int sizeToSend = sendLastChunk ? (unsigned int)packet.size() : activeChunkSize;
 
         //QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
 
@@ -1776,10 +1823,11 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
         {
             sendLastChunk = false;
             packet.clear();
+            emit signalAllChunksSent();
             return;
         }
 
-        if (packet.size() < sysExTxChunkSize) // if we have one chunk left, loop around and send it
+        if (packet.size() < activeChunkSize) // if we have one chunk left, loop around and send it
         {
             sendLastChunk = true;
         }

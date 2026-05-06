@@ -82,6 +82,7 @@ public:
 
     // from device
     static void midiInCallback ( double deltatime, std::vector< unsigned char > *message, void *userData );
+    static QString windowsVersionString();
 
     QSettings *sessionSettings;
 
@@ -145,6 +146,7 @@ public:
 
     QElapsedTimer syxExTxChunkTimer; // speed limit for chunk transmission
     unsigned int sysExTxChunkSize; // if 0 then send at once, if non-zero then break sysex into chunks this many bytes in size
+    unsigned int sysExTxChunkSizeFW; // chunk size used during firmware updates
     unsigned int sysExTxChunkDelay; // if 0 then send at once, if non-zero then wait this many ms between chunks
 
     QTimer* versionPoller;
@@ -213,6 +215,9 @@ signals:
 
     // transmit health — emitted on retry (retryCount>0) and on recovery (retryCount=0)
     void signalTransmitHealth(int retryCount, int maxRetries);
+
+    // chunked sysex send complete
+    void signalAllChunksSent();
 
     void signalRequestGlobals();
     void signalRestoreGlobals();
