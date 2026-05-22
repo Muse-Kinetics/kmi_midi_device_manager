@@ -32,6 +32,7 @@
 #include <QThread>
 #include <QDateTime>
 #include <QFile>
+#include <QLoggingCategory>
 #include <QMutex>
 #include <QMutexLocker>
 #include <QSysInfo>
@@ -42,9 +43,22 @@
 #define MIDI_DIAG 1  // MIDI diagnostic instrumentation — remove when done debugging
 #define MIDI_SYSEX_CAPTURE 1 // byte-level TX/RX SysEx capture to file
 
-// debugging macro
-#define DM_OUT qDebug() << deviceName << ": "
-#define DM_OUT_P qDebug() << thisMidiDeviceManager->objectName << ": "
+Q_LOGGING_CATEGORY(kmiMdmLog, "kmi.mdm")
+
+// stream-style logging macros for MidiDeviceManager call sites
+#define DM_DBG qCDebug(kmiMdmLog).noquote() << deviceName << ":"
+#define DM_INFO qCInfo(kmiMdmLog).noquote() << deviceName << ":"
+#define DM_WARN qCWarning(kmiMdmLog).noquote() << deviceName << ":"
+#define DM_ERR qCCritical(kmiMdmLog).noquote() << deviceName << ":"
+
+#define DM_DBG_P qCDebug(kmiMdmLog).noquote() << thisMidiDeviceManager->objectName << ":"
+#define DM_INFO_P qCInfo(kmiMdmLog).noquote() << thisMidiDeviceManager->objectName << ":"
+#define DM_WARN_P qCWarning(kmiMdmLog).noquote() << thisMidiDeviceManager->objectName << ":"
+#define DM_ERR_P qCCritical(kmiMdmLog).noquote() << thisMidiDeviceManager->objectName << ":"
+
+// compatibility aliases for existing call sites
+#define DM_OUT DM_DBG
+#define DM_OUT_P DM_DBG_P
 
 #ifdef MIDI_DIAG
 static QElapsedTimer g_diagTimer;
@@ -420,14 +434,14 @@ bool MidiDeviceManager::slotOpenMidiIn()
 
     if (port_in == -1)
     {
-        DM_OUT << "slotOpenMidiIn: ERROR, port does not exist (-1)";
+        DM_WARN << "slotOpenMidiIn: port does not exist (-1)";
         return 0;
     }
 
     // first close the port to avoid errors
     if (port_out_open)
     {
-        if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
+        if (!slotCloseMidiIn(SIGNAL_NONE)) DM_WARN << "couldn't close in port:" << port_in;
     }
 
     try
@@ -449,7 +463,7 @@ bool MidiDeviceManager::slotOpenMidiIn()
     catch (RtMidiError &error)
     {
         /* Return the error */
-        DM_OUT << "OPEN MIDI IN ERR:" << (QString::fromStdString(error.getMessage()));
+        DM_ERR << "OPEN MIDI IN ERR:" << (QString::fromStdString(error.getMessage()));
         port_in_open = false;
         portName_in = "";
         connected = false;
@@ -485,14 +499,14 @@ bool MidiDeviceManager::slotOpenMidiOut()
 
     if (port_out == -1)
     {
-        DM_OUT << "slotOpenMidiOut: ERROR, port does not exist (-1)";
+        DM_WARN << "slotOpenMidiOut: port does not exist (-1)";
         return 0;
     }
 
     // first close the port to avoid errors
     if (port_out_open)
     {
-        if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
+        if (!slotCloseMidiOut(SIGNAL_NONE)) DM_WARN << "couldn't close out port:" << port_out;
     }
 
     try
@@ -503,7 +517,7 @@ bool MidiDeviceManager::slotOpenMidiOut()
     catch (RtMidiError &error)
     {
         /* Return the error */
-        DM_OUT << "OPEN MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
+        DM_ERR << "OPEN MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
         port_out_open = false;
         midiSendTimer.stop();
         portName_in = "";
@@ -566,7 +580,7 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
     }
     else
     {
-        DM_OUT << "WARNING: midi_in is not instantiated, assuming port is closed";
+        DM_WARN << "midi_in is not instantiated, assuming port is closed";
         return 0; // handler doesn't exist
     }
 
@@ -585,12 +599,12 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
     catch (RtMidiError &error)
     {
         /* Return the error */
-        DM_OUT << "CLOSE MIDI IN ERR:" << (QString::fromStdString(error.getMessage()));
+        DM_WARN << "CLOSE MIDI IN ERR:" << (QString::fromStdString(error.getMessage()));
         closeSuccess = false;
     }
     catch (std::exception &e)
     {
-        DM_OUT << "CLOSE MIDI IN UNEXPECTED ERR:" << e.what();
+        DM_ERR << "CLOSE MIDI IN UNEXPECTED ERR:" << e.what();
         closeSuccess = false;
     }
 
@@ -601,7 +615,7 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
         midi_in = new RtMidiIn();
         callbackIsSet = false;
     } catch (...) {
-        DM_OUT << "CRITICAL: failed to recreate midi_in";
+        DM_ERR << "failed to recreate midi_in";
         midi_in = nullptr;
     }
 #else
@@ -648,7 +662,7 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 
     if (midi_out == nullptr)
     {
-        DM_OUT << "WARNING: midi_out was not instantiated, assuming port is closed";
+        DM_WARN << "midi_out was not instantiated, assuming port is closed";
         return 1; // handler doesn't exist
     }
 
@@ -661,12 +675,12 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
     catch (RtMidiError &error)
     {
         /* Return the error */
-        DM_OUT << "CLOSE MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
+        DM_WARN << "CLOSE MIDI OUT ERR:" << (QString::fromStdString(error.getMessage()));
         closeSuccess = false;
     }
     catch (std::exception &e)
     {
-        DM_OUT << "CLOSE MIDI OUT UNEXPECTED ERR:" << e.what();
+        DM_ERR << "CLOSE MIDI OUT UNEXPECTED ERR:" << e.what();
         closeSuccess = false;
     }
 
@@ -676,7 +690,7 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
         delete midi_out;
         midi_out = new RtMidiOut();
     } catch (...) {
-        DM_OUT << "CRITICAL: failed to recreate midi_out";
+        DM_ERR << "failed to recreate midi_out";
         midi_out = nullptr;
     }
 #else
@@ -704,7 +718,7 @@ bool MidiDeviceManager::slotCreateVirtualIn(QString portName)
     try
     {
         // first close the port to avoid errors
-        if (!slotCloseMidiIn(SIGNAL_NONE)) DM_OUT << "couldn't close in port: " << port_in;
+        if (!slotCloseMidiIn(SIGNAL_NONE)) DM_WARN << "couldn't close in port:" << port_in;
 
         //midi_in = new RtMidiIn(); // refresh RtMidi
 
@@ -720,7 +734,7 @@ bool MidiDeviceManager::slotCreateVirtualIn(QString portName)
     }
     catch (RtMidiError &error)
     {
-        DM_OUT << "openVirtualInPort error:" << (QString::fromStdString(error.getMessage()));
+        DM_ERR << "openVirtualInPort error:" << (QString::fromStdString(error.getMessage()));
         port_in_open = false;
         portName_in = "";
         connected = false;
@@ -744,7 +758,7 @@ bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
     try
     {
         // first close the port to avoid errors
-        if (!slotCloseMidiOut(SIGNAL_NONE)) DM_OUT << "couldn't close out port: " << port_out;
+        if (!slotCloseMidiOut(SIGNAL_NONE)) DM_WARN << "couldn't close out port:" << port_out;
 
         //midi_out = new RtMidiOut(); // refresh instance
 
@@ -753,7 +767,7 @@ bool MidiDeviceManager::slotCreateVirtualOut(QString portName)
     }
     catch (RtMidiError &error)
     {
-        DM_OUT << "openVirtualOutPort error:" << (QString::fromStdString(error.getMessage()));
+        DM_ERR << "openVirtualOutPort error:" << (QString::fromStdString(error.getMessage()));
         port_out_open = false;
         midiSendTimer.stop();
         portName_in = "";
@@ -958,7 +972,7 @@ void MidiDeviceManager::slotPollVersion()
             slotSendSysEx(_bl_quneo, sizeof(_bl_quneo));
             break;
         default:
-            DM_OUT << "Bootloader command not configured for this device";
+            DM_WARN << "Bootloader command not configured for this device";
         }
 
         if (PID != PID_SOFTSTEP1 && PID != PID_SOFTSTEP2 && PID != PID_12STEP1 && PID != PID_12STEP2)
@@ -1127,19 +1141,19 @@ void MidiDeviceManager::slotPollVersion()
 
         if (port_in != kmiPorts->getInPortNumber(portName_in))
         {
-            DM_OUT << "ERROR: input port: " << port_in << " does not match RtMidi port: " << newPortIn << " - updating...";
+            DM_WARN << "input port:" << port_in << "does not match RtMidi port:" << newPortIn << "- updating";
             if (!slotUpdatePortIn(newPortIn))
             {
-                DM_OUT << "ERROR: couldn't update input port";
+                DM_ERR << "couldn't update input port";
             }
         }
 
         if (port_out != kmiPorts->getOutPortNumber(portName_out))
         {
-            DM_OUT << "ERROR: output port: " << port_out << " does not match RtMidi port: " << newPortOut << " - updating...";
+            DM_WARN << "output port:" << port_out << "does not match RtMidi port:" << newPortOut << "- updating";
             if (!slotUpdatePortOut(newPortOut))
             {
-                DM_OUT << "ERROR: couldn't update output port";
+                DM_ERR << "couldn't update output port";
             }
         }
 
@@ -1244,7 +1258,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
 
     if (port_out_open == false)
     {
-        DM_OUT << "ERROR: midi_out is not open, aborting slotSendMIDI!";
+        DM_WARN << "midi_out is not open, aborting slotSendSysEx";
         return; // handler doesn't exist
     }
 
@@ -1272,7 +1286,7 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
         }
         catch (RtMidiError &error)
         {
-            DM_OUT << "SYSEX SEND ERR:" << (QString::fromStdString(error.getMessage()));
+            DM_ERR << "SYSEX SEND ERR:" << (QString::fromStdString(error.getMessage()));
             slotCloseMidiIn(SIGNAL_SEND);
             slotCloseMidiOut(SIGNAL_SEND);
             kmiPorts->slotRefreshPortMaps(); // kick it
@@ -1310,7 +1324,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
 
     if (feedbackTestIndex == 0) // feedback loop detected!
     {
-        DM_OUT << "*** FEEDBACK LOOP DETECTED, MIDI PORTS CLOSED *** - " << sysExMessageByteArray;
+        DM_ERR << "*** FEEDBACK LOOP DETECTED, MIDI PORTS CLOSED *** -" << sysExMessageByteArray;
         this->disconnect(SIGNAL(signalRxMidi_raw(uchar, uchar, uchar, uchar)));
         slotCloseMidiIn(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
         slotCloseMidiOut(SIGNAL_SEND); // better than letting the app crash? Only if we alert the end user, otherwise this becomes a support
@@ -1521,7 +1535,7 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     }
     else // firmware does not match, alert app/user
     {
-        DM_OUT << "emit fw mismatch - fwv: " << deviceFirmwareVersion.toUInt() << "cfwv: " << applicationFirmwareVersion.toUInt();
+        DM_WARN << "emit fw mismatch - fwv:" << deviceFirmwareVersion.toUInt() << "cfwv:" << applicationFirmwareVersion.toUInt();
         emit signalFirmwareDetected(this, false);
     }
 
@@ -1682,7 +1696,7 @@ void MidiDeviceManager::slotSendMIDI(uchar status, uchar d1 = 255, uchar d2 = 25
 
     if (port_out_open == false)
     {
-        DM_OUT << "ERROR: midi_out is not open, aborting slotSendMIDI! - Status: " << status;
+        DM_WARN << "midi_out is not open, aborting slotSendMIDI - status:" << status;
         return; // handler doesn't exist
     }
 
@@ -1705,14 +1719,14 @@ void MidiDeviceManager::handleSendError(const QString &context)
 
     if (midiChunkRetryCount <= maxRetries) {
         int delayMs = qMin(100 * (1 << (midiChunkRetryCount - 1)), 3000);
-        DM_OUT << context << "- will retry" << midiChunkRetryCount << "/" << maxRetries
-               << "in" << delayMs << "ms";
+        DM_WARN << context << "- will retry" << midiChunkRetryCount << "/" << maxRetries
+                << "in" << delayMs << "ms";
         emit signalTransmitHealth(midiChunkRetryCount, maxRetries);
         return; // packet preserved for retry
     }
 
     // Exhausted retries — escalate to circuit breaker
-    DM_OUT << context << "- exhausted" << maxRetries << "retries, escalating";
+    DM_ERR << context << "- exhausted" << maxRetries << "retries, escalating";
     packet.clear();
 
     if (midiSendErrorTimer.elapsed() > MIDI_SEND_ERROR_WINDOW_MS) {
@@ -1722,7 +1736,7 @@ void MidiDeviceManager::handleSendError(const QString &context)
     midiSendErrorTimer.restart();
 
     if (midiSendErrorCount >= MIDI_SEND_ERROR_MAX) {
-        DM_OUT << "MIDI send circuit breaker tripped after" << midiSendErrorCount << "consecutive errors";
+        DM_ERR << "MIDI send circuit breaker tripped after" << midiSendErrorCount << "consecutive errors";
         midiSendTimer.stop();
         if (isFw) {
             firmwareUpdateState = FWUD_STATE_FAIL;
@@ -1759,7 +1773,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 
     if (packet.size() > MAX_MIDI_SYSEX_SIZE)
     {
-        DM_OUT << "ERROR: SYSEX TX BUFFER OVERFLOW, DISCARDING";
+        DM_ERR << "SYSEX TX BUFFER OVERFLOW, DISCARDING";
         packet.clear();
         return;
     }
@@ -1811,7 +1825,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
         }
         catch (RtMidiError &error)
         {
-            DM_OUT << QString("MIDI SEND CHUNK ERR: %1 (size %2)").arg(QString::fromStdString(error.getMessage())).arg(packet.size());
+            DM_WARN << QString("MIDI SEND CHUNK ERR: %1 (size %2)").arg(QString::fromStdString(error.getMessage())).arg(packet.size());
             handleSendError("chunk send");
             return;
         }
@@ -1871,7 +1885,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
                 }
                 catch (RtMidiError &error)
                 {
-                    DM_OUT << QString("MIDI SEND SMALL SYSEX ERR: %1 (size %2)").arg(QString::fromStdString(error.getMessage())).arg(packet.size());
+                    DM_WARN << QString("MIDI SEND SMALL SYSEX ERR: %1 (size %2)").arg(QString::fromStdString(error.getMessage())).arg(packet.size());
                     handleSendError("small sysex send");
                     return;
                 }
@@ -1892,7 +1906,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
                         }
                         catch (RtMidiError &error)
                         {
-                            DM_OUT << QString("MIDI SEND PACKET ERR: %1 (size %2)").arg(QString::fromStdString(error.getMessage())).arg(packet.size());
+                            DM_WARN << QString("MIDI SEND PACKET ERR: %1 (size %2)").arg(QString::fromStdString(error.getMessage())).arg(packet.size());
                             handleSendError("channel msg send");
                             return;
                         }
@@ -1914,7 +1928,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
                 }
                 catch (RtMidiError &error)
                 {
-                    DM_OUT << QString("MIDI SEND PACKET ERR: %1 (size %2)").arg(QString::fromStdString(error.getMessage())).arg(packet.size());
+                    DM_WARN << QString("MIDI SEND PACKET ERR: %1 (size %2)").arg(QString::fromStdString(error.getMessage())).arg(packet.size());
                     handleSendError("channel msg send (trailing)");
                     return;
                 }
@@ -2254,7 +2268,7 @@ void MidiDeviceManager::midiInCallback( double deltatime, std::vector< unsigned 
         }
         else
         {
-            DM_OUT_P << "ERROR- MIDI Message greater than 999 bytes (" << message->size() << " bytes) - write some more code to handle this!!";
+            DM_WARN_P << "MIDI message greater than 999 bytes (" << message->size() << " bytes) - write some more code to handle this";
         }
     }
     else
