@@ -27,6 +27,7 @@
 
 #include "KMI_mdm.h"
 #include "KMI_DevData.h"
+#include "KMI_fwupdate.h"
 #include "KMI_SysexMessages.h"
 #include <QMessageBox>
 #include <QThread>
@@ -59,6 +60,13 @@ Q_LOGGING_CATEGORY(kmiMdmLog, "kmi.mdm")
 // compatibility aliases for existing call sites
 #define DM_OUT DM_DBG
 #define DM_OUT_P DM_DBG_P
+
+static constexpr int PACKETIZED_FW_ACK_TIMEOUT_MS = 5000;
+static constexpr int PACKETIZED_FW_ACK_REQUEST_DELAY_MS = 10;
+static constexpr int PACKETIZED_FW_CHUNK_DELAY_MS = 100;
+static constexpr int PACKETIZED_FW_ACK_RETRY_LIMIT = 3;
+static constexpr int PACKETIZED_FW_FINAL_VERIFY_DELAY_MS = 3000;
+static constexpr int PACKETIZED_FW_STATUS_LOG_INTERVAL_MS = 5000;
 
 #ifdef MIDI_DIAG
 static QElapsedTimer g_diagTimer;
@@ -148,6 +156,29 @@ static void captureSysex(const char *direction,
 static void captureSysex(const char *, const MidiDeviceManager *, const std::vector<unsigned char> &, const QString & = QString()) {}
 #endif
 
+static QString packetizedFirmwarePhaseName(int phase)
+{
+    switch (phase)
+    {
+    case FW_PACKET_PHASE_IDLE:
+        return "IDLE";
+    case FW_PACKET_PHASE_REQUEST_READY:
+        return "REQUEST_READY";
+    case FW_PACKET_PHASE_WAIT_READY:
+        return "WAIT_READY";
+    case FW_PACKET_PHASE_READY_DELAY:
+        return "READY_DELAY";
+    case FW_PACKET_PHASE_CHUNK_DELAY:
+        return "CHUNK_DELAY";
+    case FW_PACKET_PHASE_FINAL_DELAY:
+        return "FINAL_DELAY";
+    case FW_PACKET_PHASE_WAIT_FINAL_VERIFY:
+        return "WAIT_FINAL_VERIFY";
+    default:
+        return QString("UNKNOWN(%1)").arg(phase);
+    }
+}
+
 MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objectNameInit, KMI_Ports *kmiP) :
     QWidget(parent)
 {
@@ -227,6 +258,16 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     fwSaveRestoreGlobals = false;
     bootloaderMode = false;
     pollingStatus = false;
+    firmwareUpdateTransportMode = FW_TRANSPORT_AUTO;
+    packetizedFirmwarePhase = FW_PACKET_PHASE_IDLE;
+    packetizedFirmwareRetryCount = 0;
+    packetizedFirmwareIdentityReplyReceived = false;
+    packetizedFirmwareFinalVerifyMatched = false;
+    packetizedFirmwareLastReplyWasBootloader = false;
+    packetizedFirmwareLastLoggedPercent = -1;
+    packetizedFirmwarePumpGeneration = 0;
+    packetizedFirmwarePhaseTimer.start();
+    packetizedFirmwareStatusLogTimer.invalidate();
 
     // break up sysex, default is disabled
     syxExTxChunkTimer.start(); // timer for chunk speedlimit
@@ -1064,11 +1105,24 @@ void MidiDeviceManager::slotPollVersion()
 
         DM_OUT << "sending firmware sysex";
 
-        slotSendSysExBA(firmwareByteArray); // send firmware
+        if (isPacketizedFirmwareUpdateEnabled())
+        {
+            startPacketizedFirmwareUpdate();
+        }
+        else
+        {
+            slotSendSysExBA(firmwareByteArray); // send firmware
+        }
         firmwareUpdateState = FWUD_STATE_FW_SENT_WAIT;
         firmwareUpdateStateTimer.restart();
         break;
     case FWUD_STATE_FW_SENT_WAIT:
+        if (isPacketizedFirmwareTransferActive())
+        {
+            processPacketizedFirmwareUpdate();
+            break;
+        }
+
         if (packet.size() > 500)
         {
             emit signalFwConsoleMessage(QString("FW bytes remaining: %1\n").arg(packet.size()));
@@ -1104,6 +1158,8 @@ void MidiDeviceManager::slotPollVersion()
         break;
     case FWUD_STATE_SUCCESS:
         DM_OUT << "Firmware Update Successful!" << firmwareUpdateStateTimer.elapsed();
+
+        resetPacketizedFirmwareUpdate();
 
         emit signalFirmwareUpdateComplete(true);
 
@@ -1250,6 +1306,12 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
     //DM_OUT << "Send sysex, length: " << len << " syx: " << sysEx << " PID: " << PID;
     std::vector<unsigned char> message(sysEx, sysEx+len);
 
+    if (isPacketizedFirmwareTransferActive())
+    {
+        DM_WARN << "Blocking queued SysEx during packetized firmware update";
+        return;
+    }
+
     DIAG(this, QString("slotSendSysEx len=%1 chunkSize=%2 packetBuf=%3 portOpen=%4 thread=%5")
          .arg(len).arg((firmwareUpdateState != FWUD_STATE_IDLE) ? sysExTxChunkSizeFW : sysExTxChunkSize).arg(packet.size()).arg(port_out_open)
          .arg((quint64)QThread::currentThreadId(), 0, 16));
@@ -1274,14 +1336,14 @@ void MidiDeviceManager::slotSendSysEx(unsigned char *sysEx, int len)
         len++;
     }
 
-    captureSysex("TX", this, message, "slotSendSysEx-normalized");
+    captureSysex("TX", this, message, packetizedFirmwareCaptureNote("slotSendSysEx-normalized"));
 
     if (sysExTxChunkSize == 0)
     {
         // standard method, send the payload all at once
         try
         {
-            captureSysex("TX", this, message, "sendMessage-all-at-once");
+            captureSysex("TX", this, message, packetizedFirmwareCaptureNote("sendMessage-all-at-once"));
             midi_out->sendMessage( &message );
         }
         catch (RtMidiError &error)
@@ -1490,6 +1552,15 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
     // update this check from session settings
     ignoreFwVersionCheck = sessionSettings->value("IGNORE_FW_CHECKS", false).toBool();
 
+    if (isPacketizedFirmwareTransferActive())
+    {
+        packetizedFirmwareIdentityReplyReceived = true;
+        packetizedFirmwareLastReplyWasBootloader = bootloaderMode;
+        packetizedFirmwareFinalVerifyMatched = (!bootloaderMode && (deviceFirmwareVersion == applicationFirmwareVersion || ignoreFwVersionCheck));
+        firmwareUpdateStateTimer.restart();
+        requestPacketizedFirmwarePump();
+    }
+
     if (bootloaderMode)
     {
 //        DM_OUT << "Device in bootloader mode";
@@ -1498,7 +1569,10 @@ void MidiDeviceManager::slotProcessSysEx(QByteArray sysExMessageByteArray, std::
         // update firmwareUpdateState if it isn't idle
         if (firmwareUpdateState)
         {
-            firmwareUpdateState = FWUD_STATE_BL_MODE;
+            if (!isPacketizedFirmwareTransferActive())
+            {
+                firmwareUpdateState = FWUD_STATE_BL_MODE;
+            }
         }
         else
         {
@@ -1580,7 +1654,13 @@ void MidiDeviceManager::slotRequestFirmwareUpdate()
 {
 //    DM_OUT << "slotRequestFirmwareUpdate - fwUpdteRequested: " << fwUpdateRequested << " bootloaderMode: " << bootloaderMode << " globalsRequested: " << globalsRequested;
 
+    pollingStatus = false;
     firmwareUpdateState = FWUD_STATE_BEGIN;
+}
+
+void MidiDeviceManager::slotSetFirmwareUpdateTransportMode(int mode)
+{
+    firmwareUpdateTransportMode = mode;
 }
 
 void MidiDeviceManager::slotFirmwareUpdateReset()
@@ -1588,6 +1668,445 @@ void MidiDeviceManager::slotFirmwareUpdateReset()
     DM_OUT << "slotFirmwareUpdateReset called";
 //    globalsRequested = false;
     pollingStatus = false;
+    resetPacketizedFirmwareUpdate();
+    packet.clear();
+    midiChunkRetryCount = 0;
+}
+
+bool MidiDeviceManager::isPacketizedFirmwareUpdateEnabled() const
+{
+    if (firmwareUpdateTransportMode == FW_TRANSPORT_PACKETIZED)
+    {
+        return true;
+    }
+
+    if (firmwareUpdateTransportMode == FW_TRANSPORT_LEGACY)
+    {
+        return false;
+    }
+
+    switch (PID)
+    {
+    case PID_SOFTSTEP1:
+    case PID_SOFTSTEP2:
+    case PID_SOFTSTEP_USB:
+    case PID_SOFTSTEP3:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool MidiDeviceManager::isPacketizedFirmwareTransferActive() const
+{
+    return packetizedFirmwarePhase != FW_PACKET_PHASE_IDLE;
+}
+
+void MidiDeviceManager::setPacketizedFirmwarePhase(int newPhase, const QString &reason)
+{
+    if (packetizedFirmwarePhase == newPhase)
+    {
+        return;
+    }
+
+    const QString oldName = packetizedFirmwarePhaseName(packetizedFirmwarePhase);
+    const QString newName = packetizedFirmwarePhaseName(newPhase);
+    packetizedFirmwarePhase = newPhase;
+
+    if (newPhase == FW_PACKET_PHASE_IDLE || newPhase == FW_PACKET_PHASE_FINAL_DELAY || newPhase == FW_PACKET_PHASE_WAIT_FINAL_VERIFY)
+    {
+        const QString message = QString("packetized firmware phase %1 -> %2 reason=%3 chunk=%4/%5 sent=%6/%7")
+                                    .arg(oldName)
+                                    .arg(newName)
+                                    .arg(reason)
+                                    .arg(packetizedFirmwareUpdate.hasPendingPacket() ? packetizedFirmwareUpdate.currentPacketNumber() : packetizedFirmwareUpdate.sentPackets())
+                                    .arg(packetizedFirmwareUpdate.totalPackets())
+                                    .arg(packetizedFirmwareUpdate.sentPackets())
+                                    .arg(packetizedFirmwareUpdate.totalPackets());
+        DIAG(this, message);
+    }
+}
+
+QString MidiDeviceManager::packetizedFirmwareCaptureNote(const QString &baseNote) const
+{
+    if (!isPacketizedFirmwareTransferActive())
+    {
+        return baseNote;
+    }
+
+    const int totalPackets = packetizedFirmwareUpdate.totalPackets();
+    const int sentPackets = packetizedFirmwareUpdate.sentPackets();
+    const int packetNumber = packetizedFirmwareUpdate.hasPendingPacket()
+        ? packetizedFirmwareUpdate.currentPacketNumber()
+        : qMax(0, sentPackets);
+
+    return QString("%1|fwPhase=%2|fwPacket=%3/%4|fwSent=%5/%4")
+        .arg(baseNote)
+        .arg(packetizedFirmwarePhaseName(packetizedFirmwarePhase))
+        .arg(packetNumber)
+        .arg(totalPackets)
+        .arg(sentPackets);
+}
+
+bool MidiDeviceManager::sendSysExImmediate(const QByteArray &sysExMessage, const QString &note)
+{
+    std::vector<unsigned char> message(sysExMessage.begin(), sysExMessage.end());
+
+    if (message.empty())
+    {
+        DM_WARN << "sendSysExImmediate called with empty message";
+        return false;
+    }
+
+    if (message.front() != MIDI_SX_START)
+    {
+        message.insert(message.begin(), MIDI_SX_START);
+    }
+    if (message.back() != MIDI_SX_STOP)
+    {
+        message.push_back(MIDI_SX_STOP);
+    }
+
+    if (!port_out_open)
+    {
+        DM_WARN << "midi_out is not open, aborting sendSysExImmediate";
+        return false;
+    }
+
+    ioGate = false;
+
+    try
+    {
+        captureSysex("TX", this, message, packetizedFirmwareCaptureNote(note));
+        midi_out->sendMessage(&message);
+    }
+    catch (RtMidiError &error)
+    {
+        ioGate = true;
+        DM_ERR << "Immediate SYSEX SEND ERR:" << QString::fromStdString(error.getMessage());
+        return false;
+    }
+
+    ioGate = true;
+    return true;
+}
+
+bool MidiDeviceManager::sendFirmwareIdentityRequest(const QString &context, int attempt, int retryLimit)
+{
+    Q_UNUSED(context);
+    Q_UNUSED(attempt);
+    Q_UNUSED(retryLimit);
+
+    QByteArray request;
+    QString note = "packetized-firmware-identity-request";
+
+    if (deviceName == "SSCOM")
+    {
+        request = QByteArray(reinterpret_cast<const char*>(_fw_req_softstep), sizeof(_fw_req_softstep));
+    }
+    else if (portName_out == TWELVESTEP1_IN_P1)
+    {
+        request = QByteArray(reinterpret_cast<const char*>(_fw_req_12step), sizeof(_fw_req_12step));
+    }
+    else
+    {
+        request = QByteArray(reinterpret_cast<const char*>(_sx_id_req_standard), sizeof(_sx_id_req_standard));
+    }
+
+    return sendSysExImmediate(request, note);
+}
+
+void MidiDeviceManager::maybeLogPacketizedFirmwareStatus(bool force)
+{
+    if (!isPacketizedFirmwareTransferActive())
+    {
+        return;
+    }
+
+    const int percent = packetizedFirmwareUpdate.percentComplete();
+    if (!force && percent == packetizedFirmwareLastLoggedPercent &&
+        packetizedFirmwareStatusLogTimer.isValid() &&
+        packetizedFirmwareStatusLogTimer.elapsed() < PACKETIZED_FW_STATUS_LOG_INTERVAL_MS)
+    {
+        return;
+    }
+
+    if (!force && packetizedFirmwareStatusLogTimer.isValid() &&
+        packetizedFirmwareStatusLogTimer.elapsed() < PACKETIZED_FW_STATUS_LOG_INTERVAL_MS)
+    {
+        return;
+    }
+
+    packetizedFirmwareLastLoggedPercent = percent;
+    packetizedFirmwareStatusLogTimer.restart();
+
+    DM_INFO << QString("packetized firmware update in progress %1% packets=%2/%3 bytes=%4/%5 phase=%6")
+                   .arg(percent)
+                   .arg(packetizedFirmwareUpdate.sentPackets())
+                   .arg(packetizedFirmwareUpdate.totalPackets())
+                   .arg(packetizedFirmwareUpdate.sentBytes())
+                   .arg(packetizedFirmwareUpdate.totalBytes())
+                   .arg(packetizedFirmwarePhaseName(packetizedFirmwarePhase));
+}
+
+void MidiDeviceManager::requestPacketizedFirmwarePump(int delayMs)
+{
+    const quint64 generation = packetizedFirmwarePumpGeneration;
+    QTimer::singleShot(qMax(0, delayMs), this, [this, generation]() {
+        if (generation != packetizedFirmwarePumpGeneration)
+        {
+            return;
+        }
+
+        processPacketizedFirmwareUpdate();
+    });
+}
+
+void MidiDeviceManager::startPacketizedFirmwareUpdate()
+{
+    QString errorMessage;
+    if (!packetizedFirmwareUpdate.initialize(firmwareByteArray, &errorMessage))
+    {
+        DM_ERR << errorMessage;
+        emit signalFwConsoleMessage(QString("\nERROR! %1\n").arg(errorMessage));
+        firmwareUpdateState = FWUD_STATE_FAIL;
+        return;
+    }
+
+    if (packetizedFirmwareUpdate.ignoredByteCount() > 0)
+    {
+        emit signalFwConsoleMessage(QString("warning: ignored %1 non-sysex firmware bytes before packet splitting\n")
+                                    .arg(packetizedFirmwareUpdate.ignoredByteCount()));
+    }
+
+    packetizedFirmwareRetryCount = 0;
+    packetizedFirmwareIdentityReplyReceived = false;
+    packetizedFirmwareFinalVerifyMatched = false;
+    packetizedFirmwareLastReplyWasBootloader = false;
+    packetizedFirmwarePumpGeneration++;
+    packetizedFirmwareLastLoggedPercent = -1;
+    packetizedFirmwareStatusLogTimer.invalidate();
+    setPacketizedFirmwarePhase(FW_PACKET_PHASE_REQUEST_READY, "packetized update initialized");
+    packetizedFirmwarePhaseTimer.restart();
+    pollingStatus = false;
+
+    DM_INFO << QString("starting packetized firmware update bytes=%1 chunks=%2")
+                   .arg(packetizedFirmwareUpdate.totalBytes())
+                   .arg(packetizedFirmwareUpdate.totalPackets());
+    requestPacketizedFirmwarePump();
+}
+
+int MidiDeviceManager::packetizedFirmwareUiProgress() const
+{
+    const int percent = packetizedFirmwareUpdate.percentComplete();
+    return qBound(50, 50 + qRound((static_cast<double>(percent) * 40.0) / 100.0), 90);
+}
+
+void MidiDeviceManager::processPacketizedFirmwareUpdate()
+{
+    if (!isPacketizedFirmwareTransferActive())
+    {
+        return;
+    }
+
+    if (!packet.empty())
+    {
+        requestPacketizedFirmwarePump(1);
+        return;
+    }
+
+    while (isPacketizedFirmwareTransferActive())
+    {
+        switch (packetizedFirmwarePhase)
+        {
+        case FW_PACKET_PHASE_IDLE:
+            return;
+        case FW_PACKET_PHASE_REQUEST_READY:
+            packetizedFirmwareRetryCount++;
+            packetizedFirmwareIdentityReplyReceived = false;
+            packetizedFirmwareFinalVerifyMatched = false;
+            if (!sendFirmwareIdentityRequest(
+                    QString("chunk firmware payload chunk=%1/%2")
+                        .arg(packetizedFirmwareUpdate.currentPacketNumber())
+                        .arg(packetizedFirmwareUpdate.totalPackets()),
+                    packetizedFirmwareRetryCount,
+                    PACKETIZED_FW_ACK_RETRY_LIMIT))
+            {
+                firmwareUpdateState = FWUD_STATE_FAIL;
+                return;
+            }
+            setPacketizedFirmwarePhase(FW_PACKET_PHASE_WAIT_READY, "identity request sent");
+            packetizedFirmwarePhaseTimer.restart();
+            requestPacketizedFirmwarePump(PACKETIZED_FW_ACK_TIMEOUT_MS);
+            return;
+        case FW_PACKET_PHASE_WAIT_READY:
+            if (packetizedFirmwareIdentityReplyReceived)
+            {
+                setPacketizedFirmwarePhase(FW_PACKET_PHASE_READY_DELAY, "identity reply received");
+                packetizedFirmwarePhaseTimer.restart();
+                continue;
+            }
+
+            if (packetizedFirmwarePhaseTimer.elapsed() > PACKETIZED_FW_ACK_TIMEOUT_MS)
+            {
+                if (packetizedFirmwareRetryCount >= PACKETIZED_FW_ACK_RETRY_LIMIT)
+                {
+                    emit signalFwConsoleMessage("firmware identity request timed out before chunk send\n");
+                    firmwareUpdateState = FWUD_STATE_FAIL;
+                }
+                else
+                {
+                    setPacketizedFirmwarePhase(FW_PACKET_PHASE_REQUEST_READY, "identity request retry");
+                    continue;
+                }
+                return;
+            }
+
+            requestPacketizedFirmwarePump(PACKETIZED_FW_ACK_TIMEOUT_MS - qMin<int>(PACKETIZED_FW_ACK_TIMEOUT_MS, packetizedFirmwarePhaseTimer.elapsed()));
+            return;
+        case FW_PACKET_PHASE_READY_DELAY:
+        {
+            const int readyDelayRemaining = PACKETIZED_FW_ACK_REQUEST_DELAY_MS - static_cast<int>(packetizedFirmwarePhaseTimer.elapsed());
+            if (readyDelayRemaining > 0)
+            {
+                requestPacketizedFirmwarePump(readyDelayRemaining);
+                return;
+            }
+
+            const int chunkBytes = packetizedFirmwareUpdate.currentPacketSize();
+
+            if (!sendSysExImmediate(packetizedFirmwareUpdate.currentPacket(), "packetized-firmware-chunk"))
+            {
+                firmwareUpdateState = FWUD_STATE_FAIL;
+                return;
+            }
+
+            emit signalFwConsoleMessage(QString("Sending chunk %1/%2...\n")
+                                        .arg(packetizedFirmwareUpdate.currentPacketNumber())
+                                        .arg(packetizedFirmwareUpdate.totalPackets()));
+            packetizedFirmwareUpdate.markCurrentPacketSent();
+            emit signalFwProgress(packetizedFirmwareUiProgress());
+            Q_UNUSED(chunkBytes);
+            maybeLogPacketizedFirmwareStatus();
+
+            packetizedFirmwareRetryCount = 0;
+            firmwareUpdateStateTimer.restart();
+            packetizedFirmwarePhaseTimer.restart();
+
+            if (packetizedFirmwareUpdate.hasPendingPacket())
+            {
+                setPacketizedFirmwarePhase(FW_PACKET_PHASE_CHUNK_DELAY, "chunk sent");
+                requestPacketizedFirmwarePump(PACKETIZED_FW_CHUNK_DELAY_MS);
+            }
+            else
+            {
+                maybeLogPacketizedFirmwareStatus(true);
+                setPacketizedFirmwarePhase(FW_PACKET_PHASE_FINAL_DELAY, "all chunks sent");
+                requestPacketizedFirmwarePump(PACKETIZED_FW_FINAL_VERIFY_DELAY_MS);
+            }
+
+            return;
+        }
+        case FW_PACKET_PHASE_CHUNK_DELAY:
+        {
+            const int chunkDelayRemaining = PACKETIZED_FW_CHUNK_DELAY_MS - static_cast<int>(packetizedFirmwarePhaseTimer.elapsed());
+            if (chunkDelayRemaining > 0)
+            {
+                requestPacketizedFirmwarePump(chunkDelayRemaining);
+                return;
+            }
+
+            setPacketizedFirmwarePhase(FW_PACKET_PHASE_REQUEST_READY, "inter-chunk delay complete");
+            packetizedFirmwarePhaseTimer.restart();
+            continue;
+        }
+        case FW_PACKET_PHASE_FINAL_DELAY:
+        {
+            const int finalDelayRemaining = PACKETIZED_FW_FINAL_VERIFY_DELAY_MS - static_cast<int>(packetizedFirmwarePhaseTimer.elapsed());
+            if (finalDelayRemaining > 0)
+            {
+                requestPacketizedFirmwarePump(finalDelayRemaining);
+                return;
+            }
+
+            DM_INFO << QString("packetized firmware transfer complete, waiting %1ms before final verification")
+                           .arg(PACKETIZED_FW_FINAL_VERIFY_DELAY_MS);
+            packetizedFirmwareRetryCount = 1;
+            packetizedFirmwareIdentityReplyReceived = false;
+            packetizedFirmwareFinalVerifyMatched = false;
+            if (!sendFirmwareIdentityRequest("final verification", packetizedFirmwareRetryCount, PACKETIZED_FW_ACK_RETRY_LIMIT))
+            {
+                firmwareUpdateState = FWUD_STATE_FAIL;
+                return;
+            }
+            setPacketizedFirmwarePhase(FW_PACKET_PHASE_WAIT_FINAL_VERIFY, "post-transfer identity request sent");
+            packetizedFirmwarePhaseTimer.restart();
+            requestPacketizedFirmwarePump(PACKETIZED_FW_ACK_TIMEOUT_MS);
+            return;
+        }
+        case FW_PACKET_PHASE_WAIT_FINAL_VERIFY:
+            if (packetizedFirmwareIdentityReplyReceived)
+            {
+                if (packetizedFirmwareFinalVerifyMatched)
+                {
+                    if (fwSaveRestoreGlobals)
+                    {
+                        firmwareUpdateState = FWUD_STATE_GLOBALS_SEND;
+                    }
+                    else
+                    {
+                        firmwareUpdateState = FWUD_STATE_SUCCESS;
+                    }
+                }
+                else
+                {
+                    emit signalFwConsoleMessage(QString("final verification reply invalid bootloader=%1\n")
+                                                .arg(packetizedFirmwareLastReplyWasBootloader ? "true" : "false"));
+                    firmwareUpdateState = FWUD_STATE_FAIL;
+                }
+                return;
+            }
+
+            if (packetizedFirmwarePhaseTimer.elapsed() > PACKETIZED_FW_ACK_TIMEOUT_MS)
+            {
+                if (packetizedFirmwareRetryCount >= PACKETIZED_FW_ACK_RETRY_LIMIT)
+                {
+                    emit signalFwConsoleMessage("post-transfer identity check timed out\n");
+                    firmwareUpdateState = FWUD_STATE_FAIL;
+                }
+                else
+                {
+                    packetizedFirmwareRetryCount++;
+                    packetizedFirmwareIdentityReplyReceived = false;
+                    packetizedFirmwareFinalVerifyMatched = false;
+                    if (!sendFirmwareIdentityRequest("final verification", packetizedFirmwareRetryCount, PACKETIZED_FW_ACK_RETRY_LIMIT))
+                    {
+                        firmwareUpdateState = FWUD_STATE_FAIL;
+                        return;
+                    }
+                    packetizedFirmwarePhaseTimer.restart();
+                    requestPacketizedFirmwarePump(PACKETIZED_FW_ACK_TIMEOUT_MS);
+                }
+                return;
+            }
+
+            requestPacketizedFirmwarePump(PACKETIZED_FW_ACK_TIMEOUT_MS - qMin<int>(PACKETIZED_FW_ACK_TIMEOUT_MS, packetizedFirmwarePhaseTimer.elapsed()));
+            return;
+        }
+    }
+}
+
+void MidiDeviceManager::resetPacketizedFirmwareUpdate()
+{
+    packetizedFirmwareUpdate.reset();
+    packetizedFirmwarePumpGeneration++;
+    packetizedFirmwareStatusLogTimer.invalidate();
+    packetizedFirmwareLastLoggedPercent = -1;
+    setPacketizedFirmwarePhase(FW_PACKET_PHASE_IDLE, "packetized update reset");
+    packetizedFirmwareRetryCount = 0;
+    packetizedFirmwareIdentityReplyReceived = false;
+    packetizedFirmwareFinalVerifyMatched = false;
+    packetizedFirmwareLastReplyWasBootloader = false;
 }
 
 
@@ -1815,7 +2334,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
              .arg((quint64)QThread::currentThreadId(), 0, 16));
         try
         {  
-            captureSysex("TX", this, chunkToSend, "sendMessage-chunk");
+            captureSysex("TX", this, chunkToSend, packetizedFirmwareCaptureNote("sendMessage-chunk"));
             midi_out->sendMessage(&chunkToSend);
             if (midiChunkRetryCount > 0) {
                 DM_OUT << "Send recovered after" << midiChunkRetryCount << "retries";
@@ -1875,7 +2394,7 @@ void MidiDeviceManager::slotEmptyMIDIBuffer()
 
                 try
                 {
-                    captureSysex("TX", this, smallSysExPacket, "sendMessage-small-sysex");
+                    captureSysex("TX", this, smallSysExPacket, packetizedFirmwareCaptureNote("sendMessage-small-sysex"));
                     midi_out->sendMessage( &smallSysExPacket );
                     if (midiChunkRetryCount > 0) {
                         DM_OUT << "Send recovered after" << midiChunkRetryCount << "retries";
@@ -2262,7 +2781,7 @@ void MidiDeviceManager::midiInCallback( double deltatime, std::vector< unsigned 
 #ifdef MDM_DEBUG_ENABLED
                 DM_OUT_P << "SysEx received";
  #endif
-                captureSysex("RX", thisMidiDeviceManager, *message, "midiInCallback-sysex");
+                captureSysex("RX", thisMidiDeviceManager, *message, thisMidiDeviceManager->packetizedFirmwareCaptureNote("midiInCallback-sysex"));
                 thisMidiDeviceManager->slotProcessSysEx(packetArray, message);
             }
         }

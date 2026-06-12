@@ -23,6 +23,7 @@
 #include <atomic>
 
 #include "RtMidi.h"
+#include "KMI_fwupdate.h"
 #include "KMI_ports.h"
 #include "midi.h"
 
@@ -72,6 +73,24 @@ enum
     BL_INSTALL_PENDING,
     BL_INSTALL_DEVICE_DISCONNECTED,
     BL_INSTALL_COMPLETE
+};
+
+enum
+{
+    FW_TRANSPORT_AUTO,
+    FW_TRANSPORT_LEGACY,
+    FW_TRANSPORT_PACKETIZED
+};
+
+enum
+{
+    FW_PACKET_PHASE_IDLE,
+    FW_PACKET_PHASE_REQUEST_READY,
+    FW_PACKET_PHASE_WAIT_READY,
+    FW_PACKET_PHASE_READY_DELAY,
+    FW_PACKET_PHASE_CHUNK_DELAY,
+    FW_PACKET_PHASE_FINAL_DELAY,
+    FW_PACKET_PHASE_WAIT_FINAL_VERIFY
 };
 
 class MidiDeviceManager : public QWidget
@@ -139,10 +158,20 @@ public:
 
     int firmwareUpdateState;    // state of fw update process
     int installingBootloader;   // state of bootloader install process
+    int firmwareUpdateTransportMode;
+    int packetizedFirmwarePhase;
+    int packetizedFirmwareRetryCount;
+    bool packetizedFirmwareIdentityReplyReceived;
+    bool packetizedFirmwareFinalVerifyMatched;
+    bool packetizedFirmwareLastReplyWasBootloader;
     QElapsedTimer firmwareUpdateStateTimer;
+    QElapsedTimer packetizedFirmwarePhaseTimer;
+    QElapsedTimer packetizedFirmwareStatusLogTimer;
+    int packetizedFirmwareLastLoggedPercent;
     int fwVerPollSkipConnectCycles; // set this count to not send fwver request for x connect cycles
     QElapsedTimer fwVerRequestTimer; // time since the last fwver request was sent
     bool firstFwVerRequestHasBeenSent; // set this high the first time we send a request, if false then don't wait for timer
+    PacketizedFirmwareUpdate packetizedFirmwareUpdate;
 
     QElapsedTimer syxExTxChunkTimer; // speed limit for chunk transmission
     unsigned int sysExTxChunkSize; // if 0 then send at once, if non-zero then break sysex into chunks this many bytes in size
@@ -285,6 +314,7 @@ public slots:
     bool slotOpenFirmwareFile(QString filePath);
     bool slotOpenBootloaderFile(QString filePath);
     void slotRequestFirmwareUpdate();
+    void slotSetFirmwareUpdateTransportMode(int mode);
     //void slotSendFirmware();
     void slotFirmwareUpdateReset();
 
@@ -306,6 +336,19 @@ public slots:
 private:
     bool callbackIsSet;
     void handleSendError(const QString &context);
+    bool isPacketizedFirmwareUpdateEnabled() const;
+    bool isPacketizedFirmwareTransferActive() const;
+    void setPacketizedFirmwarePhase(int newPhase, const QString &reason);
+    QString packetizedFirmwareCaptureNote(const QString &baseNote) const;
+    bool sendSysExImmediate(const QByteArray &sysExMessage, const QString &note);
+    bool sendFirmwareIdentityRequest(const QString &context, int attempt, int retryLimit);
+    void startPacketizedFirmwareUpdate();
+    void processPacketizedFirmwareUpdate();
+    void resetPacketizedFirmwareUpdate();
+    int packetizedFirmwareUiProgress() const;
+    void requestPacketizedFirmwarePump(int delayMs = 0);
+    void maybeLogPacketizedFirmwareStatus(bool force = false);
+    quint64 packetizedFirmwarePumpGeneration;
 
 };
 
