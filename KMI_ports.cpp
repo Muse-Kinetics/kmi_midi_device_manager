@@ -656,6 +656,12 @@ QString portNameFix(QString portName)
 
 #ifdef Q_OS_WIN
 
+#if defined(__WINDOWS_MIDI_SERVICES__)
+    // WMS reports canonical names identical to CoreMIDI (e.g. "SoftStep Control Surface").
+    // No translation or suffix-stripping is needed.
+    return portName;
+#endif
+
     // WinMM can append trailing " <index>" to names (e.g. "MIDIIN2 (...) 1").
     // UWP names generally do not use this suffix, so only trim when the suffix is numeric.
     int lastSpace = portName.lastIndexOf(" ");
