@@ -19,6 +19,30 @@
 #include "KMI_DevData.h"
 #include <QSettings>
 
+#ifdef Q_OS_WIN
+#include <QAbstractNativeEventFilter>
+#include <QCoreApplication>
+#include <windows.h>
+
+// Listens for WM_DEVICECHANGE to detect USB MIDI hot-plug on real WinMM (no WMS).
+// midiInGetNumDevs() on Windows only returns an updated count reliably after the
+// Win32 message pump processes this notification.  The debounce timer prevents a
+// flood of rescans when multiple events arrive together (e.g. USB enumeration).
+class KmiDeviceChangeFilter : public QAbstractNativeEventFilter
+{
+    KMI_Ports *m_ports;
+public:
+    explicit KmiDeviceChangeFilter(KMI_Ports *p) : m_ports(p) {}
+    bool nativeEventFilter(const QByteArray &, void *message, qintptr *) override
+    {
+        MSG *msg = static_cast<MSG *>(message);
+        if (msg->message == WM_DEVICECHANGE)
+            m_ports->m_hotplugTimer->start(400); // debounce: rescan 400 ms after last event
+        return false; // never consume the message
+    }
+};
+#endif
+
 #define qsFromStd QString::fromStdString
 
 namespace
@@ -33,6 +57,10 @@ int slotGetDetectedSoftStepHardwareRevision()
 int lastMIDIIN_QuNexus = 0; // for portNameFix on Windows
 int lastMIDIOUT_QuNexus = 0;
 
+// File-scope backend selection — set once in KMI_Ports constructor.
+// Used by the free function portNameFix() which has no KMI_Ports context.
+static RtMidi::Api g_kmi_midi_api = RtMidi::UNSPECIFIED;
+
 KMI_Ports::KMI_Ports(QWidget *Parent)
 {
     qDebug() << "KMI_Ports instance created";
@@ -42,19 +70,72 @@ KMI_Ports::KMI_Ports(QWidget *Parent)
     // initialize input counters
     numInputs = numOutputs = 0;
 
-    IN_PORT_MGR = new RtMidiIn();
-    OUT_PORT_MGR = new RtMidiOut();
+    // ---- Select the best available MIDI backend at runtime -----------------
+    // When both WMS and WinMM are compiled in, probe WMS first.  If the SDK
+    // runtime is not installed on this machine, fall back to WinMM seamlessly.
+    // Set KMI_MIDI_BACKEND=winmm in the environment to force WinMM (useful for testing).
+#if defined(__WINDOWS_MIDI_SERVICES__) && defined(__WINDOWS_MM__)
+    bool forceWinMM = qgetenv("KMI_MIDI_BACKEND").toLower() == "winmm";
+    if (!forceWinMM && RtMidi::isWindowsMidiServicesAvailable()) {
+        kmiMidiApi = RtMidi::WINDOWS_MIDI_SERVICES;
+        qDebug() << "[KMI_Ports] Windows MIDI Services SDK detected — using WMS backend";
+    } else {
+        kmiMidiApi = RtMidi::WINDOWS_MM;
+        if (forceWinMM)
+            qDebug() << "[KMI_Ports] KMI_MIDI_BACKEND=winmm — forcing WinMM backend";
+        else
+            qDebug() << "[KMI_Ports] Windows MIDI Services SDK not installed — falling back to WinMM backend";
+    }
+#elif defined(__WINDOWS_MIDI_SERVICES__)
+    kmiMidiApi = RtMidi::WINDOWS_MIDI_SERVICES;
+    qDebug() << "[KMI_Ports] Using Windows MIDI Services backend";
+#elif defined(__WINDOWS_MM__)
+    kmiMidiApi = RtMidi::WINDOWS_MM;
+    qDebug() << "[KMI_Ports] Using Windows Multimedia (WinMM) backend";
+#elif defined(__MACOSX_CORE__)
+    kmiMidiApi = RtMidi::MACOSX_CORE;
+    qDebug() << "[KMI_Ports] Using CoreMIDI backend";
+#elif defined(__LINUX_ALSA__)
+    kmiMidiApi = RtMidi::LINUX_ALSA;
+    qDebug() << "[KMI_Ports] Using ALSA backend";
+#else
+    kmiMidiApi = RtMidi::UNSPECIFIED;
+    qDebug() << "[KMI_Ports] Using platform-default MIDI backend";
+#endif
+    // ------------------------------------------------------------------------
+    g_kmi_midi_api = kmiMidiApi;
+
+    IN_PORT_MGR = new RtMidiIn(kmiMidiApi);
+    OUT_PORT_MGR = new RtMidiOut(kmiMidiApi);
 
 #ifndef Q_OS_WIN
     // Virtual ports
-    IN_PORT_VIRTUAL = new RtMidiIn();
-    OUT_PORT_VIRTUAL = new RtMidiOut();
+    IN_PORT_VIRTUAL = new RtMidiIn(kmiMidiApi);
+    OUT_PORT_VIRTUAL = new RtMidiOut(kmiMidiApi);
 #endif
 
     //setup timer for regularly polling ports
     devicePoller = new QTimer(this);
     connect(devicePoller, SIGNAL(timeout()), this, SLOT(slotPollDevices()));
     //devicePoller->start(1);
+
+#ifdef Q_OS_WIN
+    // On the WinMM path, install a WM_DEVICECHANGE listener so hot-plug events
+    // trigger an immediate rescan rather than waiting for the next poll tick.
+    if (kmiMidiApi == RtMidi::WINDOWS_MM) {
+        m_hotplugTimer = new QTimer(this);
+        m_hotplugTimer->setSingleShot(true);
+        // Use slotPollDevices (incremental diff) rather than slotRefreshPortMaps (full wipe).
+        // slotRefreshPortMaps clears the global port maps before rescanning, which causes a
+        // spurious "all ports disconnected → all ports reconnected" cycle on every WM_DEVICECHANGE
+        // event — including the secondary enumeration events Windows fires seconds after initial
+        // USB connect.  slotPollDevices only signals for ports that actually changed.
+        connect(m_hotplugTimer, &QTimer::timeout, this, &KMI_Ports::slotPollDevices);
+        m_deviceChangeFilter = new KmiDeviceChangeFilter(this);
+        qApp->installNativeEventFilter(m_deviceChangeFilter);
+        qDebug() << "[KMI_Ports] WM_DEVICECHANGE listener installed for WinMM hot-plug detection";
+    }
+#endif
 
     // debug enum translations
     inOut <<
@@ -71,58 +152,44 @@ KMI_Ports::KMI_Ports(QWidget *Parent)
 // Public Slots
 // ****************************
 
+KMI_Ports::~KMI_Ports()
+{
+#ifdef Q_OS_WIN
+    if (m_deviceChangeFilter) {
+        qApp->removeNativeEventFilter(m_deviceChangeFilter);
+        delete m_deviceChangeFilter;
+        m_deviceChangeFilter = nullptr;
+    }
+#endif
+}
 
 void KMI_Ports::slotPollDevices()
 {
-//    int newInputCount = 0;
-//    int newOutputCount = 0;
-
-    //qDebug() << "slotPollDevices called - delete/recreate active RtMidi instances";
-
-    if (numInputs) // don't re-initialize RtMidi if there are no inputs
-    {
+    // Always recreate the enumeration objects for a fresh query from the OS MIDI stack.
+    // On real WinMM (no WMS), midiInGetNumDevs() may not reflect hot-plug events until
+    // the RtMidi handle is recreated.  The original numInputs/numOutputs guard prevented
+    // detection when zero ports were known at startup.
+    try {
         delete IN_PORT_MGR;
         IN_PORT_MGR = nullptr;
-        IN_PORT_MGR = new RtMidiIn();
+        IN_PORT_MGR = new RtMidiIn(kmiMidiApi);
+    } catch (RtMidiError &e) {
+        qDebug() << "[KMI_Ports] IN_PORT_MGR recreate failed:" << QString::fromStdString(e.getMessage());
+        return;
     }
-    if (numOutputs)
-    {
+    try {
         delete OUT_PORT_MGR;
         OUT_PORT_MGR = nullptr;
-        OUT_PORT_MGR = new RtMidiOut();
+        OUT_PORT_MGR = new RtMidiOut(kmiMidiApi);
+    } catch (RtMidiError &e) {
+        qDebug() << "[KMI_Ports] OUT_PORT_MGR recreate failed:" << QString::fromStdString(e.getMessage());
+        return;
     }
 
-    // Previous method would count the ports and compare to the previous count, but this can miss
-    // changes in between slotPollDevices intervals if the number of new ports matches the old
-//    try
-//    {
-//        newInputCount = IN_PORT_MGR->getPortCount();
-//    }
-//    catch (RtMidiError &error)
-//    {
-//        /* Return the error */
-//        qDebug() << "RtMidi Error:" << (QString::fromStdString(error.getMessage()));
-//    }
-
-//    try
-//    {
-//        newOutputCount = OUT_PORT_MGR->getPortCount();
-//    }
-//    catch (RtMidiError &error)
-//    {
-//        /* Return the error */
-//        qDebug() << "RtMidi Error:" << (QString::fromStdString(error.getMessage()));
-//    }
-
-//    qDebug() << "slotPollDevices - newIn: " << newInputCount << " prevIn: " << numInputs << " - newOut: " << newOutputCount << " prevOut: " << numOutputs;
-//    if (newInputCount != numInputs || newOutputCount != numOutputs)
-//    {
-//        qDebug() << "KMI_Ports: slotPollDevices mismatch!";
-        if(checkPortsForChanges())
-        {
-            listMaps();
-        }
-    //}
+    if (checkPortsForChanges())
+    {
+        listMaps();
+    }
 }
 
 // force a refresh by clearing the port metadata
@@ -657,9 +724,11 @@ QString portNameFix(QString portName)
 #ifdef Q_OS_WIN
 
 #if defined(__WINDOWS_MIDI_SERVICES__)
-    // WMS reports canonical names identical to CoreMIDI (e.g. "SoftStep Control Surface").
-    // No translation or suffix-stripping is needed.
-    return portName;
+    // WMS reports canonical port names with no trailing index suffix.
+    // Only skip stripping when WMS is actually the active backend at runtime.
+    if (g_kmi_midi_api == RtMidi::WINDOWS_MIDI_SERVICES) {
+        return portName;
+    }
 #endif
 
     // WinMM can append trailing " <index>" to names (e.g. "MIDIIN2 (...) 1").

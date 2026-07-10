@@ -18,6 +18,10 @@
 #include <QtWidgets>
 #include <QTimer>
 
+#ifdef Q_OS_WIN
+class KmiDeviceChangeFilter; // forward declaration — defined in KMI_ports.cpp
+#endif
+
 enum
 {
     PORT_CONNECT,
@@ -46,9 +50,13 @@ public:
     QStringList mType;
 
     explicit KMI_Ports(QWidget *parent = nullptr);
+    ~KMI_Ports();
 
     // public variables
     int numInputs, numOutputs;
+
+    // Selected MIDI backend — chosen once in the constructor (WMS if available, else WinMM).
+    RtMidi::Api kmiMidiApi;
 
     // MIDI handlers to manage input and output ports
     RtMidiIn *IN_PORT_MGR;
@@ -68,6 +76,12 @@ public:
 
     //------------------- Polling
     QTimer* devicePoller;
+
+#ifdef Q_OS_WIN
+    // WM_DEVICECHANGE listener — active only on the WinMM path for hot-plug detection.
+    KmiDeviceChangeFilter *m_deviceChangeFilter = nullptr;
+    QTimer *m_hotplugTimer = nullptr;
+#endif
 
     // pubic functions
     int getInPortNumber(QString);

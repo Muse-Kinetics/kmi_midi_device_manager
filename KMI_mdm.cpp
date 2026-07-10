@@ -28,6 +28,19 @@
 #include "KMI_mdm.h"
 #include "KMI_DevData.h"
 #include "KMI_fwupdate.h"
+
+namespace {
+// Mirror the same KMI_MIDI_BACKEND env-var check used in KMI_Ports so that
+// midi_in/midi_out are always on the same backend as the port enumerator.
+RtMidi::Api kmiSelectMidiApi()
+{
+#if defined(__WINDOWS_MIDI_SERVICES__) && defined(__WINDOWS_MM__)
+    if (qgetenv("KMI_MIDI_BACKEND").toLower() == "winmm")
+        return RtMidi::WINDOWS_MM;
+#endif
+    return RtMidi::UNSPECIFIED;
+}
+}
 #include "KMI_SysexMessages.h"
 #include <QMessageBox>
 #include <QThread>
@@ -299,8 +312,8 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     //DM_OUT << "fwVerPollSkipConnectCycles = 0";
 
     // setup RtMidi connections
-    midi_in = new RtMidiIn();
-    midi_out = new RtMidiOut();
+    midi_in = new RtMidiIn(kmiSelectMidiApi());
+    midi_out = new RtMidiOut(kmiSelectMidiApi());
     //midi_in = nullptr;
     //midi_out = nullptr;
 
@@ -653,7 +666,7 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
 #ifdef Q_OS_WINDOWS
     try {
         delete midi_in;
-        midi_in = new RtMidiIn();
+        midi_in = new RtMidiIn(kmiSelectMidiApi());
         callbackIsSet = false;
     } catch (...) {
         DM_ERR << "failed to recreate midi_in";
@@ -664,7 +677,7 @@ bool MidiDeviceManager::slotCloseMidiIn(bool signal) // SIGNAL_SEND is the most 
     {
         DM_OUT << "left bootloader, deleting/renewing midi_in";
         delete midi_in;
-        midi_in = new RtMidiIn();
+        midi_in = new RtMidiIn(kmiSelectMidiApi());
     }
 #endif
 
@@ -729,7 +742,7 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
 #ifdef Q_OS_WINDOWS
     try {
         delete midi_out;
-        midi_out = new RtMidiOut();
+        midi_out = new RtMidiOut(kmiSelectMidiApi());
     } catch (...) {
         DM_ERR << "failed to recreate midi_out";
         midi_out = nullptr;
@@ -739,7 +752,7 @@ bool MidiDeviceManager::slotCloseMidiOut(bool signal)
     {
         DM_OUT << "left bootloader, deleting/renewing midi_out";
         delete midi_out;
-        midi_out = new RtMidiOut();
+        midi_out = new RtMidiOut(kmiSelectMidiApi());
         bootloaderMode = false;
     }
 #endif
@@ -879,7 +892,11 @@ void MidiDeviceManager::slotStopPolling(QString caller) // this has to be called
 // 1. test if we need to send a fw version/identity request
 // 2. run through the firmware update state machine switch case
 
-#define FW_UPDATE_TIMEOUT_INTERVAL 35000
+// Bootloader-wait timeout (ms).  On a physical host this completes in <10 s, but on a VM the
+// WinMM MIDI driver for the bootloader device can take much longer to appear in midiInGetNumDevs()
+// after the USB device connects.  90 s gives the VM over a minute of headroom while still
+// showing an eventual failure message if the device truly never reconnects.
+#define FW_UPDATE_TIMEOUT_INTERVAL 90000
 
 void MidiDeviceManager::slotPollVersion()
 {
@@ -967,29 +984,22 @@ void MidiDeviceManager::slotPollVersion()
         case PID_SOFTSTEP1:
         case PID_SOFTSTEP2:
         case PID_SOFTSTEP3:
-            if ((uchar)deviceFirmwareVersion[0] < 1) // pre-bootloader firmware
+            if ((uchar)deviceFirmwareVersion[0] < 1) // pre-bootloader firmware — no longer supported
             {
-                // Softstep specific:
-                // version 98 is a placeholder for ZenDesk users and has a bootloader
-                // version 99 is the trojan horse bootloader update
-                // everything else needs to have the bootloader installed
-                if (((uchar)deviceFirmwareVersion[0] == 9 && (uchar)deviceFirmwareVersion[1] < 8) ||
-                     (uchar)deviceFirmwareVersion[0] < 9)
-                {
-                    installingBootloader = BL_INSTALL_PENDING;
-                    emit signalFwConsoleMessage("\n\n*** Installing bootloader *** - device will reboot several times!\n");
-
-                    //DM_OUT << "fwVerPollSkipConnectCycles = 2";
-                    fwVerPollSkipConnectCycles = 1; // don't send fw version request during bootloader install
-
-                    QThread::msleep(1000); // wait for console to update
-                    // this will:
-                    // - install the trojan horse firmware image
-                    // - reboot the device
-                    // - trojan horse installs the bootloader
-                    // - device reboots into bootloader mode
-                    slotSendSysExBA(bootloaderByteArray);
-                }
+                // The trojan-horse bootloader install path (firmware versions < 1.0.0, including
+                // the v99 trojan image) is permanently disabled.  Devices at these versions must
+                // go through the support process at support.musekinetics.com.
+                DM_ERR << "Firmware update blocked: device firmware version"
+                       << QString("%1.%2.%3")
+                              .arg((uchar)deviceFirmwareVersion[0])
+                              .arg((uchar)deviceFirmwareVersion[1])
+                              .arg((uchar)deviceFirmwareVersion[2])
+                       << "is no longer supported.";
+                emit signalFwConsoleMessage(
+                    "\n\nFirmware update not supported for this device version.\n"
+                    "Please contact support at support.musekinetics.com\n");
+                firmwareUpdateState = FWUD_STATE_FAIL;
+                break;
             }
             else // this is the standard method to enter bootloader mode, once a bootloader is installed
             {
