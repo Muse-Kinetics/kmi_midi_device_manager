@@ -80,6 +80,11 @@ static constexpr int PACKETIZED_FW_CHUNK_DELAY_MS = 100;
 static constexpr int PACKETIZED_FW_ACK_RETRY_LIMIT = 3;
 static constexpr int PACKETIZED_FW_FINAL_VERIFY_DELAY_MS = 3000;
 static constexpr int PACKETIZED_FW_STATUS_LOG_INTERVAL_MS = 5000;
+// Poll interval while waiting for the device's MIDI port to reopen after it
+// closes to reboot from bootloader into application mode post-transfer. This
+// is expected, not a failure; how long it takes varies a lot by backend (WMS
+// is typically fast, WinMM has been observed taking 15-20+ seconds).
+static constexpr int PACKETIZED_FW_PORT_POLL_INTERVAL_MS = 1000;
 
 #ifdef MIDI_DIAG
 static QElapsedTimer g_diagTimer;
@@ -2039,6 +2044,27 @@ void MidiDeviceManager::processPacketizedFirmwareUpdate()
                 return;
             }
 
+            // The device's port is expected to be closed here while it reboots from
+            // bootloader into application mode - that's not a failure. Keep polling
+            // for the port to reopen (bounded by the same generous
+            // FW_UPDATE_TIMEOUT_INTERVAL budget used elsewhere in this state machine
+            // for "waiting for device to reappear") instead of repeatedly trying to
+            // send on a closed port, which previously fell straight through to
+            // sendFirmwareIdentityRequest() below and failed instantly, over and
+            // over, without ever giving the device a real chance to reconnect.
+            if (!port_out_open)
+            {
+                if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
+                {
+                    DM_ERR << "packetized firmware: device did not reconnect after reboot within"
+                           << FW_UPDATE_TIMEOUT_INTERVAL << "ms";
+                    firmwareUpdateState = FWUD_STATE_FAIL;
+                    return;
+                }
+                requestPacketizedFirmwarePump(PACKETIZED_FW_PORT_POLL_INTERVAL_MS);
+                return;
+            }
+
             DM_INFO << QString("packetized firmware transfer complete, waiting %1ms before final verification")
                            .arg(PACKETIZED_FW_FINAL_VERIFY_DELAY_MS);
             packetizedFirmwareRetryCount = 1;
@@ -2074,6 +2100,24 @@ void MidiDeviceManager::processPacketizedFirmwareUpdate()
                                                 .arg(packetizedFirmwareLastReplyWasBootloader ? "true" : "false"));
                     firmwareUpdateState = FWUD_STATE_FAIL;
                 }
+                return;
+            }
+
+            // Mirror the FW_PACKET_PHASE_FINAL_DELAY guard: if the port has closed
+            // again (device still mid-reboot), don't burn a retry attempt trying to
+            // send on it - just keep waiting for it to reopen, bounded by the overall
+            // FW_UPDATE_TIMEOUT_INTERVAL budget (shared via firmwareUpdateStateTimer,
+            // which has been running since the last chunk was sent).
+            if (!port_out_open)
+            {
+                if (firmwareUpdateStateTimer.elapsed() > FW_UPDATE_TIMEOUT_INTERVAL)
+                {
+                    DM_ERR << "packetized firmware: device did not reconnect after reboot within"
+                           << FW_UPDATE_TIMEOUT_INTERVAL << "ms";
+                    firmwareUpdateState = FWUD_STATE_FAIL;
+                    return;
+                }
+                requestPacketizedFirmwarePump(PACKETIZED_FW_PORT_POLL_INTERVAL_MS);
                 return;
             }
 

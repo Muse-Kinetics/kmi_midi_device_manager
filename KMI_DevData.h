@@ -143,6 +143,17 @@ enum {SS_UNDEFINED, SS_1, SS_2, SS_3};
     #define TWELVESTEP1_OUT_P2 "MIDIOUT2 (12Step)"
 #endif
 
+// 12 Step1, firmware 1.0.9+: the unit's USB descriptor strings changed to named
+// ports ("12Step Control Surface" / "12Step Expander"), replacing the unnamed
+// "12Step" / "12Step 2" (or "12Step Port 1/2" on Mac) scheme above. Same string on
+// every platform, since the name now comes from the device's own descriptor rather
+// than driver/OS port-numbering conventions. Both the old and new names are checked
+// wherever a 12Step1 port is matched, so units on either firmware are still detected.
+#define TWELVESTEP1_IN_P1_NAMED "12Step Control Surface"
+#define TWELVESTEP1_OUT_P1_NAMED "12Step Control Surface"
+#define TWELVESTEP1_IN_P2_NAMED "12Step Expander"
+#define TWELVESTEP1_OUT_P2_NAMED "12Step Expander"
+
 // 12 Step2
 
 #define TWELVESTEP_BL_PORT "12 Step Bootloader"
