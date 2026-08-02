@@ -63,4 +63,17 @@ unsigned char _bl_ver_softstep[] =
     1, 0, 0
 };
 
+// malletStation EM Pro (controller). The ID reply carries only major.minor.patch;
+// the 4th "dev" byte (internal 0.1.6.4) is not transmitted, so this is 0.1.6.
+unsigned char _fw_ver_empro[] =
+{
+    0, 1, 6
+};
+
+// SoundStation. Internal version 0.1.0.1; ID reply carries 0.1.0. (Version still in flux.)
+unsigned char _fw_ver_soundstation[] =
+{
+    0, 1, 0
+};
+
 #endif // KMI_FWVERSIONS_H

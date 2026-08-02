@@ -38,8 +38,13 @@ enum {SS_UNDEFINED, SS_1, SS_2, SS_3};
 #define PID_KMIX_CTL        36
 #define PID_KBP4            37      // hard coded port names
 #define PID_KBP4_BL         38
-#define PID_EM1             39      // test but likely hard coded
+#define PID_EM1             39      // 0x27 original malletStation (test but likely hard coded)
 #define PID_EM1_BL          40
+
+// EM Pro + SoundStation (values mirror firmware MIDI_device_metadata.hpp PID_MIDI_*)
+#define PID_EMPRO           46      // 0x2E malletStation EM Pro (controller)
+#define PID_EMPRO_SAMPLER   47      // 0x2F EM Pro Sound Card (sampler) — aware of it, not the primary target
+#define PID_SOUNDSTATION    48      // 0x30 SoundStation
 
 #define PID_BOPPAD          117
 #define PID_BOPPAD_BL       118 // this may be USB only, confirm if sysex changes
@@ -202,6 +207,20 @@ enum {SS_UNDEFINED, SS_1, SS_2, SS_3};
     #define KMIX_OUT_P1 "Audio Control"
     #define KMIX_OUT_P2 "Control Surface"
     #define KMIX_OUT_P3 "Expander"
+
+// EM PRO (malletStation EM Pro controller) — USB product "malletStation Pro", 2 active MIDI ports.
+// Current-gen KMI STM32 convention: the OS reports "<Product> <Jack>" (cf. QuNexus/SoftStep above).
+// TODO: confirm exact port strings on Mac/Win/Linux hardware before relying on name-based matching.
+    #define EMPRO_IN_P1  "malletStation Pro Control"
+    #define EMPRO_OUT_P1 "malletStation Pro Control"
+    #define EMPRO_IN_P2  "malletStation Pro MIDI 5-pin DIN"
+    #define EMPRO_OUT_P2 "malletStation Pro MIDI 5-pin DIN"
+
+// SOUNDSTATION — USB product "SoundSTATION", 2 active MIDI ports. TODO: confirm on hardware.
+    #define SOUNDSTATION_IN_P1  "SoundSTATION Control"
+    #define SOUNDSTATION_OUT_P1 "SoundSTATION Control"
+    #define SOUNDSTATION_IN_P2  "SoundSTATION MIDI 5-pin DIN"
+    #define SOUNDSTATION_OUT_P2 "SoundSTATION MIDI 5-pin DIN"
 
 
 

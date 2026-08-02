@@ -15,7 +15,7 @@
 */
 
 #include "RtMidi.h"
-#include <QtWidgets>
+#include <QObject>
 #include <QTimer>
 
 #ifdef Q_OS_WIN
@@ -39,17 +39,17 @@ extern int lastMIDIIN_QuNexus, lastMIDIOUT_QuNexus;
 
 QString portNameFix(QString); // strip port number from end of RtMidi windows port names
 
-class KMI_Ports : public QWidget
+class KMI_Ports : public QObject
 {
     Q_OBJECT
 
 public:
 
-    QWidget *thisParent;
+    QObject *thisParent;
     QStringList inOut;
     QStringList mType;
 
-    explicit KMI_Ports(QWidget *parent = nullptr);
+    explicit KMI_Ports(QObject *parent = nullptr);
     ~KMI_Ports();
 
     // public variables

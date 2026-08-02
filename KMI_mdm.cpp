@@ -42,7 +42,7 @@ RtMidi::Api kmiSelectMidiApi()
 }
 }
 #include "KMI_SysexMessages.h"
-#include <QMessageBox>
+// QMessageBox removed — headless. Errors are reported via signalErrorPopup(QString).
 #include <QThread>
 #include <QDateTime>
 #include <QFile>
@@ -197,8 +197,8 @@ static QString packetizedFirmwarePhaseName(int phase)
     }
 }
 
-MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objectNameInit, KMI_Ports *kmiP) :
-    QWidget(parent)
+MidiDeviceManager::MidiDeviceManager(QObject *parent, int initPID, QString objectNameInit, KMI_Ports *kmiP) :
+    QObject(parent)
 {
     sessionSettings = new QSettings(this);
 
@@ -225,6 +225,9 @@ MidiDeviceManager::MidiDeviceManager(QWidget *parent, int initPID, QString objec
     lookupPID.insert(PID_KBP4_BL, "KBP4 Bootloader");
     lookupPID.insert(PID_EM1, "MalletStation");
     lookupPID.insert(PID_EM1_BL, "MalletStation Bootloader");
+    lookupPID.insert(PID_EMPRO, "malletStation Pro");
+    lookupPID.insert(PID_EMPRO_SAMPLER, "EM Pro Sound Card");
+    lookupPID.insert(PID_SOUNDSTATION, "SoundSTATION");
     lookupPID.insert(PID_BOPPAD, "BopPad");
     lookupPID.insert(PID_BOPPAD_BL, "BopPad Bootloader");
 
@@ -2776,9 +2779,8 @@ void MidiDeviceManager::slotParsePacket(QByteArray packetArray)
 // **********************************************************************************
 void MidiDeviceManager::slotErrorPopup(QString errorMessage)
 {
-    QMessageBox errBox;
-    errBox.setText(errorMessage);
-    errBox.exec();
+    // Headless: emit for the host to display (QWidget app -> QMessageBox, QML app -> Dialog).
+    emit signalErrorPopup(errorMessage);
 }
 
 // **********************************************************************************

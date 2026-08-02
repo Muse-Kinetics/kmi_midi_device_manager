@@ -15,9 +15,8 @@
 */
 
 #include <QDebug>
-#include <QWidget>
+#include <QObject>
 #include <QtGui>
-#include <QApplication>
 #include <QTimer>
 #include <QElapsedTimer>
 #include <atomic>
@@ -93,11 +92,11 @@ enum
     FW_PACKET_PHASE_WAIT_FINAL_VERIFY
 };
 
-class MidiDeviceManager : public QWidget
+class MidiDeviceManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit MidiDeviceManager(QWidget *parent = nullptr, int initPID = -1, QString objectNameInit = "undefined", KMI_Ports *kmiP = NULL);
+    explicit MidiDeviceManager(QObject *parent = nullptr, int initPID = -1, QString objectNameInit = "undefined", KMI_Ports *kmiP = NULL);
 
     // from device
     static void midiInCallback ( double deltatime, std::vector< unsigned char > *message, void *userData );
@@ -236,6 +235,10 @@ signals:
     void signalStopGlobalTimer();
     void signalBootloaderMode(bool);
     void signalConnected(bool);
+
+    // Headless error reporting (replaces the old in-class QMessageBox).
+    // A QWidget host can show a QMessageBox; a QML host can show a Dialog.
+    void signalErrorPopup(QString errorMessage);
 
     // firmware update
     void signalFwConsoleMessage(QString message);

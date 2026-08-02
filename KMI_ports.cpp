@@ -61,7 +61,7 @@ int lastMIDIOUT_QuNexus = 0;
 // Used by the free function portNameFix() which has no KMI_Ports context.
 static RtMidi::Api g_kmi_midi_api = RtMidi::UNSPECIFIED;
 
-KMI_Ports::KMI_Ports(QWidget *Parent)
+KMI_Ports::KMI_Ports(QObject *Parent)
 {
     qDebug() << "KMI_Ports instance created";
 
