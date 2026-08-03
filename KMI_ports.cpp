@@ -723,16 +723,8 @@ QString portNameFix(QString portName)
 
 #ifdef Q_OS_WIN
 
-#if defined(__WINDOWS_MIDI_SERVICES__)
-    // WMS reports canonical port names with no trailing index suffix.
-    // Only skip stripping when WMS is actually the active backend at runtime.
-    if (g_kmi_midi_api == RtMidi::WINDOWS_MIDI_SERVICES) {
-        return portName;
-    }
-#endif
-
     // WinMM can append trailing " <index>" to names (e.g. "MIDIIN2 (...) 1").
-    // UWP names generally do not use this suffix, so only trim when the suffix is numeric.
+    // UWP/WMS names generally do not use this suffix, so only trim when the suffix is numeric.
     int lastSpace = portName.lastIndexOf(" ");
     if (lastSpace > 0)
     {
@@ -745,8 +737,34 @@ QString portNameFix(QString portName)
         }
     }
 
+#if defined(__WINDOWS_MIDI_SERVICES__)
+    // K-Mix's Thesycon driver is a genuine vendor MIDI driver, not USB-MIDI-class-compliant like
+    // SoftStep/QuNexus/12Step (confirmed with Eric, 2026-08-02). That distinction is exactly why
+    // this needs its own WMS-specific interception: for class-compliant devices, WMS reports the
+    // canonical name directly (that's the generic early return further below); for K-Mix's vendor
+    // driver, WMS instead reports the bare jack name straight off the driver — "Audio Control",
+    // "Expander", "Control Surface" — auto-suffixed with a numeric index ("Expander 2",
+    // "Control Surface 3") to disambiguate identically-named jacks, already stripped above — with
+    // NO device-name prefix at all. WinMM, by contrast, has always synthesized a "K-Mix "-prefixed
+    // friendly name for this same hardware (see the generic K-Mix block below, which expects and
+    // preserves that prefix). So under WMS specifically, re-add "K-Mix " directly onto the bare
+    // jack name; the generic block's prefix-preserving reconstruction does not apply here since
+    // WMS gives no prefix to preserve.
+    if (g_kmi_midi_api == RtMidi::WINDOWS_MIDI_SERVICES)
+    {
+        if (portName == KMIX_IN_P1 || portName == KMIX_IN_P2 || portName == KMIX_IN_P3)
+        {
+            //qDebug() << "K-mix WMS fix - bare jack name: " << portName;
+            return QString("K-Mix %1").arg(portName);
+        }
+    }
+#endif
+
     // K-Mix on Windows is a special case, it's driver is tied to the ASIO driver from thesycon.
-    // it can show up as "2-Audio Control" or just "Audio Control"
+    // it can show up as "2-Audio Control" or just "Audio Control". This is the WinMM-era name
+    // reconstruction (raw name already "K-Mix "-prefixed by WinMM's own friendly-name synthesis,
+    // hence portTrimmed — everything after the first word — is what's compared/rebuilt here); the
+    // WMS case is handled separately above since WMS gives no such prefix to work from.
     //qDebug() << "kmix - pre: " << portName << " post: " << portName.mid(2, portName.length() - 2);
 
     QString portTrimmed = portName.mid(spacePosition + 1, portName.length() - spacePosition + 1);
@@ -759,6 +777,15 @@ QString portNameFix(QString portName)
         portName = QString("K-Mix %1").arg(portTrimmed);
         return portName;
     }
+
+#if defined(__WINDOWS_MIDI_SERVICES__)
+    // WMS reports canonical port names with no trailing index suffix for SoftStep/QuNexus/
+    // 12Step. Only skip the remaining fixups when WMS is actually the active backend at runtime
+    // (K-Mix already returned above if it matched, on either backend).
+    if (g_kmi_midi_api == RtMidi::WINDOWS_MIDI_SERVICES) {
+        return portName;
+    }
+#endif
 
     // windows test
     if (portName.indexOf("MIDIIN") == 0)
