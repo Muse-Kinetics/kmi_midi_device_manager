@@ -15,8 +15,7 @@
 */
 
 #include "RtMidi.h"
-#include <QObject>
-#include <QTimer>
+#include <QtCore>   // headless: Core types (QObject/QString/QMap/QTimer/…) without QtWidgets
 
 #ifdef Q_OS_WIN
 class KmiDeviceChangeFilter; // forward declaration — defined in KMI_ports.cpp

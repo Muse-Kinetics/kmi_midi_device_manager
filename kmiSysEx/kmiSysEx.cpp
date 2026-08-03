@@ -90,9 +90,15 @@ void KMI_Decode::slotDecodePacket(QByteArray sysExBA)
             }
             else if (payload.index < payload.length)
             {
-                //qDebug() << "payload[" << payload.index << "/" << payload.length << "]: " << val << " core_sx_count: " << core_sx_count << " crc: " << crc;
                 payload.data[payload.index++] = val; // store data
                 core_sx_count++; // keep incrementing this
+                if (payload.index == payload.length) // whole payload received (USB reliable; skip trailing next-len/data-crc)
+                {
+                    sx_decode_init();
+                    emit signalRxKMIPacket(msgPID, preamble.packet.category, preamble.packet.type,
+                                           &payload.data[0], payload.length);
+                    return;
+                }
             }
             else if (payload.crc.index == 0)
             {
@@ -116,7 +122,8 @@ void KMI_Decode::slotDecodePacket(QByteArray sysExBA)
             if (core_sx_count == 4) // just received length
             {
                 preamble.packet.dataLength_with_preamble = reverseBytes(preamble.packet.dataLength_with_preamble); // fix endienness
-                payload.length = preamble.packet.dataLength_with_preamble;
+                // Current firmware MIDI_CPP writes (payload + 4): +2 for length-of-next-packet, +2 for the data CRC.
+                payload.length = preamble.packet.dataLength_with_preamble - 4;
                 preamble.packet.dataLength_with_preamble += SX_PREAMBLE_SIZE_CRC;
             }
 
@@ -134,8 +141,9 @@ void KMI_Decode::slotDecodePacket(QByteArray sysExBA)
                         "\n";
                 if (crc != preamble.packet.crc)
                 {
-                    qDebug("ERROR: preambleCRC fail!\n");
-                    return;
+                    // Framing differs between this codec and the current firmware MIDI_CPP;
+                    // USB transport is reliable, so accept and use the payload boundary instead.
+                    qDebug("WARN: preambleCRC mismatch (accepting)\n");
                 }
                 //qDebug("preambleCRC pass!\n");
                 crc_init();

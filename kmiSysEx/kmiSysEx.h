@@ -5,6 +5,7 @@
 #define KMISYSEX_H
 
 #include <QByteArray>
+#include <QObject>   // headless: was QWidget
 #include <KMI_mdm.h>
 #include <midi.h>
 
@@ -60,7 +61,7 @@ typedef struct
 
 
 
-class KMI_Decode : public QWidget
+class KMI_Decode : public QObject
 {
     Q_OBJECT
 public:
@@ -106,7 +107,7 @@ private:
 };
 
 
-class KMI_Encode : public QWidget
+class KMI_Encode : public QObject
 {
     Q_OBJECT
 public:
@@ -156,7 +157,7 @@ private:
 
 };
 
-class kmiSysEx : public QWidget
+class kmiSysEx : public QObject
 {
     Q_OBJECT
 public:

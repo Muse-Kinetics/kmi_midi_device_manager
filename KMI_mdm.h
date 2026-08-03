@@ -14,10 +14,8 @@
 
 */
 
-#include <QDebug>
-#include <QObject>
+#include <QtCore>   // headless: Core types (QObject/QString/QByteArray/QTimer/…) without QtWidgets
 #include <QtGui>
-#include <QTimer>
 #include <QElapsedTimer>
 #include <atomic>
 
