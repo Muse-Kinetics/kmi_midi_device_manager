@@ -760,22 +760,60 @@ QString portNameFix(QString portName)
     }
 #endif
 
+    // K-Mix's current (v5.30+) Thesycon driver reports these SHORT raw names over WinMM too,
+    // not just WMS — confirmed 2026-08-03 via a real Windows 11 VM running WinMM (no WMS SDK
+    // installed): "K-Mix " (blank/trailing-space suffix), "K-Mix Control", "K-Mix Surface".
+    // These don't match the older "Audio Control"/"Control Surface"/"Expander" substrings the
+    // block below expects — that naming may still appear on units with an older Thesycon driver
+    // revision, hence keeping that check as a fallback rather than replacing it — but on the
+    // current driver, the block below never matched anything: same underlying "driver naming
+    // changed" bug as the WMS case above, just discovered on WinMM afterward. Only
+    // "K-Mix "/"K-Mix Audio Control" (the primary/mixer port) and "K-Mix Control"/
+    // "K-Mix Control Surface" actually matter to sysexmanager.cpp's connect logic; "K-Mix
+    // Surface" isn't used by any K-Mix connect path, mapped to "K-Mix Expander" for
+    // consistency with the legacy KMIX_IN_P3 constant only, unverified against real hardware.
+    if (portName == "K-Mix " || portName.trimmed() == "K-Mix")
+    {
+        return "K-Mix Audio Control";
+    }
+    if (portName == "K-Mix Control")
+    {
+        return "K-Mix Control Surface";
+    }
+    if (portName == "K-Mix Surface")
+    {
+        return "K-Mix Expander";
+    }
+
     // K-Mix on Windows is a special case, it's driver is tied to the ASIO driver from thesycon.
-    // it can show up as "2-Audio Control" or just "Audio Control". This is the WinMM-era name
-    // reconstruction (raw name already "K-Mix "-prefixed by WinMM's own friendly-name synthesis,
-    // hence portTrimmed — everything after the first word — is what's compared/rebuilt here); the
-    // WMS case is handled separately above since WMS gives no such prefix to work from.
+    // it can show up as "2-Audio Control" or just "Audio Control" — confirmed 2026-08-04 via a
+    // live diagnostic capture on real WinMM hardware: the raw name genuinely is the bare
+    // "Audio Control"/"Control Surface"/"Expander" (no "K-Mix " prefix at all — the block above
+    // handles a *different* short-form naming also seen on some driver/enumeration states).
     //qDebug() << "kmix - pre: " << portName << " post: " << portName.mid(2, portName.length() - 2);
 
     QString portTrimmed = portName.mid(spacePosition + 1, portName.length() - spacePosition + 1);
     // (commented output for QuNeo Branch)
-    if (    (portName == KMIX_IN_P1 || portTrimmed == KMIX_IN_P1) ||
-            (portName == KMIX_IN_P2 || portTrimmed == KMIX_IN_P2) ||
-            (portName == KMIX_IN_P3 || portTrimmed == KMIX_IN_P3) )
+    if (portName == KMIX_IN_P1 || portName == KMIX_IN_P2 || portName == KMIX_IN_P3)
     {
+        // Matched the bare canonical name directly (e.g. "Audio Control") — no prefix word to
+        // preserve, so rebuild from portName itself, not portTrimmed. Reconstructing from
+        // portTrimmed here was the actual bug: for a two-word bare name like "Audio Control",
+        // portTrimmed is just the second word ("Control"), so this previously produced
+        // "K-Mix Control" instead of "K-Mix Audio Control" — silently failing
+        // sysexmanager.cpp's exact-match connect check on real hardware. Confirmed via a live
+        // WinMM diagnostic capture (portName logged byte-exact as "Audio Control", length 13,
+        // hex 417564696f20436f6e74726f6c — no hidden prefix).
+        //qDebug() << "K-mix fix - bare portname: " << portName;
+        return QString("K-Mix %1").arg(portName);
+    }
+    if (portTrimmed == KMIX_IN_P1 || portTrimmed == KMIX_IN_P2 || portTrimmed == KMIX_IN_P3)
+    {
+        // Matched after stripping a leading prefix word (e.g. a hypothetical "2-Audio Control"
+        // style name) — portTrimmed here already IS the canonical name, so this reconstruction
+        // is correct as-is.
         //qDebug() << "K-mix fix - portname: " << portName << " trimmed: " << portTrimmed;
-        portName = QString("K-Mix %1").arg(portTrimmed);
-        return portName;
+        return QString("K-Mix %1").arg(portTrimmed);
     }
 
 #if defined(__WINDOWS_MIDI_SERVICES__)
